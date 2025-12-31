@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="description" content="CLIF-C ACLF Score Calculator - 급성 만성 간부전 환자 예후 예측">
+
+    <!-- iOS PWA 설정 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CLIF-C ACLF">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+    <!-- PWA 매니페스트 -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- 파비콘 -->
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-72x72.png">
+
+    <!-- 스타일시트 -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <title>CLIF-C ACLF Score Calculator</title>
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header>
+            <h1>CLIF-C ACLF Score</h1>
+            <p class="subtitle">급성 만성 간부전 예후 예측</p>
+        </header>
+
+        <main>
+            <form id="calculator-form" novalidate>
+                <!-- 기본 정보 섹션 -->
+                <section class="input-section">
+                    <h2>기본 정보 (Basic Info)</h2>
+
+                    <div class="input-group">
+                        <label for="age">나이 (Age)</label>
+                        <input type="number" id="age" min="18" max="100" placeholder="18-100세" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="wbc">WBC (cells/uL)</label>
+                        <input type="number" id="wbc" min="100" max="100000" step="100" placeholder="예: 15000" required>
+                        <span class="hint">검사실 수치 그대로 입력</span>
+                    </div>
+                </section>
+
+                <!-- 장기별 입력 섹션 -->
+                <section class="input-section">
+                    <h2>장기별 수치 (Organ Parameters)</h2>
+
+                    <!-- 간 (Liver) -->
+                    <div class="input-group">
+                        <label for="bilirubin">Bilirubin (mg/dL) - 간 (Liver)</label>
+                        <input type="number" id="bilirubin" min="0" max="100" step="0.1" placeholder="예: 5.0" required>
+                        <span class="hint">1점: &lt;6 | 2점: 6-12 | 3점: &gt;12</span>
+                    </div>
+
+                    <!-- 신장 (Kidney) -->
+                    <div class="input-group">
+                        <label for="creatinine">Creatinine (mg/dL) - 신장 (Kidney)</label>
+                        <input type="number" id="creatinine" min="0" max="30" step="0.1" placeholder="예: 1.5" required>
+                        <span class="hint">1점: &lt;2 | 2점: 2-3.5 | 3점: &gt;3.5</span>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="rrt">
+                            <label for="rrt">RRT (신대체요법) 시행 중 → 자동 3점</label>
+                        </div>
+                    </div>
+
+                    <!-- 뇌 (Brain) -->
+                    <div class="input-group">
+                        <label for="heGrade">HE Grade (간성뇌증) - 뇌 (Brain)</label>
+                        <select id="heGrade" required>
+                            <option value="">선택하세요</option>
+                            <option value="0">Grade 0 (정상) → 1점</option>
+                            <option value="1">Grade 1 → 2점</option>
+                            <option value="2">Grade 2 → 2점</option>
+                            <option value="3">Grade 3 → 3점</option>
+                            <option value="4">Grade 4 → 3점</option>
+                        </select>
+                    </div>
+
+                    <!-- 응고 (Coagulation) -->
+                    <div class="input-group">
+                        <label for="inr">INR - 응고 (Coagulation)</label>
+                        <input type="number" id="inr" min="0" max="20" step="0.1" placeholder="예: 1.8" required>
+                        <span class="hint">1점: &lt;2.0 | 2점: 2.0-2.5 | 3점: &gt;2.5</span>
+                    </div>
+
+                    <!-- 순환 (Circulation) -->
+                    <div class="input-group">
+                        <label for="map">MAP (mmHg) - 순환 (Circulation)</label>
+                        <input type="number" id="map" min="20" max="200" step="1" placeholder="예: 75" required>
+                        <span class="hint">1점: ≥70 | 2점: &lt;70</span>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="vasopressors">
+                            <label for="vasopressors">승압제 (Vasopressors) 사용 중 → 자동 3점</label>
+                        </div>
+                    </div>
+
+                    <!-- 호흡 (Respiration) -->
+                    <div class="input-group">
+                        <label>호흡 (Respiration) - PaO₂/FiO₂</label>
+                        <div class="dual-input">
+                            <div class="dual-input-item">
+                                <label for="pao2">PaO₂ (mmHg)</label>
+                                <input type="number" id="pao2" min="0" max="600" step="1" placeholder="예: 80" required>
+                            </div>
+                            <div class="dual-input-item">
+                                <label for="fio2">FiO₂ (%)</label>
+                                <input type="number" id="fio2" min="21" max="100" step="1" placeholder="예: 21" required>
+                            </div>
+                        </div>
+                        <div id="pf-result" class="calculated-value">
+                            P/F ratio: <span id="pf-ratio">--</span>
+                        </div>
+                        <span class="hint">1점: &gt;300 | 2점: 200-300 | 3점: ≤200</span>
+                    </div>
+                </section>
+
+                <!-- 버튼 섹션 -->
+                <div class="button-group">
+                    <button type="submit" class="btn-calculate">계산하기</button>
+                    <button type="reset" class="btn-reset">초기화</button>
+                </div>
+            </form>
+
+            <!-- 결과 섹션 -->
+            <section id="result-section" class="result-section hidden">
+                <h2>계산 결과</h2>
+
+                <!-- CLIF-C OF Score 카드 -->
+                <div class="result-card">
+                    <h3>CLIF-C OF Score</h3>
+                    <div id="of-score" class="score-display">
+                        <span class="value">--</span>
+                        <span class="unit">/ 18</span>
+                    </div>
+                    <div id="organ-breakdown" class="organ-breakdown">
+                        <!-- 장기별 점수가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+
+                <!-- CLIF-C ACLF Score 카드 -->
+                <div id="aclf-card" class="result-card aclf-card">
+                    <h3>CLIF-C ACLF Score</h3>
+                    <div id="aclf-score" class="score-display large">
+                        <span class="value">--</span>
+                    </div>
+                    <div id="aclf-grade" class="grade-display">
+                        <!-- ACLF Grade가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 예후 예측 카드 -->
+                <div id="prognosis-card" class="result-card prognosis-card">
+                    <h3>예후 예측 (Prognosis)</h3>
+                    <div id="prognosis-content" class="prognosis-content">
+                        <!-- 예후 정보가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 복사 버튼 -->
+                <button id="copy-btn" class="btn-copy">결과 클립보드에 복사</button>
+            </section>
+
+            <!-- 이력 섹션 -->
+            <section id="history-section" class="history-section">
+                <h2>최근 계산 이력</h2>
+                <div id="history-list" class="history-list">
+                    <!-- 이력이 여기에 표시됩니다 -->
+                </div>
+                <button id="clear-history" class="btn-clear-history">이력 전체 삭제</button>
+            </section>
+        </main>
+
+        <!-- 푸터 -->
+        <footer>
+            <p>CLIF-C ACLF Score Calculator v1.0</p>
+            <p class="disclaimer">본 계산기는 참고용이며, 최종 진단 및 치료 결정은 반드시 전문의와 상담하세요.</p>
+        </footer>
+    </div>
+
+    <!-- 토스트 메시지 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 스크립트 -->
+    <script src="js/calculator.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

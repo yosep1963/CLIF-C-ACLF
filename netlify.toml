@@ -1,0 +1,62 @@
+# Netlify 배포 설정
+# CLIF-C ACLF Score Calculator PWA
+
+[build]
+  # 배포할 디렉토리
+  publish = "dist"
+  # 빌드 명령 (정적 사이트이므로 불필요)
+  # command = ""
+
+# 리다이렉트 설정 (SPA용)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+
+# 헤더 설정
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # 보안 헤더
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # 캐시 설정
+    Cache-Control = "public, max-age=31536000"
+
+# HTML 파일은 캐시하지 않음
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Service Worker는 캐시하지 않음
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# manifest.json
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "no-cache"
+    Content-Type = "application/manifest+json"
+
+# 정적 자산 캐시 (1년)
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

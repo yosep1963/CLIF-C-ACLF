@@ -1,0 +1,40 @@
+CLIF-C ACLF Score Calculator PWA 개발 프롬프트
+1. 앱 개요
+* 목적: ACLF(만성 간부전 급성 악화) 환자의 예후 예측
+* 기술: React 또는 Vanilla JS 기반의 PWA (Netlify 배포용)
+* 특징: 오프라인 사용 가능, 모바일 최적화, 홈 화면 추가 지원
+2. 계산 공식
+CLIF-C OF (Organ Failure) Score
+6개 장기별 1-3점 부여 (총 6-18점)
+* 간 (Bilirubin, mg/dL): <6 (1점), 6-12 (2점), >12 (3점)
+* 신장 (Creatinine, mg/dL): <2 (1점), 2-3.5 (2점), >3.5 (3점). ※ RRT(신대체요법) 시 무조건 3점
+* 뇌 (HE grade): 0 (1점), 1-2 (2점), 3-4 (3점)
+* 응고 (INR): <2.0 (1점), 2.0-2.5 (2점), >2.5 (3점)
+* 순환 (MAP, mmHg): ≥70 (1점), <70 (2점). ※ 승압제(Vasopressors) 사용 시 무조건 3점
+* 호흡 (PaO₂/FiO₂): >300 (1점), 200-300 (2점), ≤200 (3점)
+CLIF-C ACLF Score
+$$CLIF\text{-}C\ ACLF = 10 \times [0.33 \times CLIF\text{-}C\_OF + 0.04 \times Age + 0.63 \times \ln(WBC / 1000) - 2]$$
+* WBC 입력값: 검사지 수치 그대로 입력 (예: 15,000 입력 시 내부적으로 15로 계산)
+3. 입력 및 출력 요구사항
+입력 항목 (Validation 포함)
+* 나이(Age): 숫자 (18-100)
+* Bilirubin: 숫자 (mg/dL)
+* Creatinine: 숫자 (mg/dL) + RRT 여부 체크박스
+* HE Grade: 드롭다운 (0, 1, 2, 3, 4)
+* INR: 숫자
+* MAP: 숫자 (mmHg) + 승압제 사용 여부 체크박스
+* PaO₂/FiO₂: 숫자
+* WBC: 숫자 ($cells/\mu L$ 단위, 예: 12000, 15000)
+출력 결과
+1. 장기별 OF 점수 및 총점
+2. CLIF-C ACLF Score (소수점 1자리)
+3. ACLF Grade: 1개 장기부전(ACLF-1), 2개(ACLF-2), 3개 이상(ACLF-3)
+4. 예상 사망률 (색상 구분: <45 초록, 45-60 노랑, >60 빨강)
+o Score <45: 28일(~10%), 90일(~20%)
+o Score 45-60: 28일(~30-40%), 90일(~50%)
+o Score >60: 28일(~60-70%), 90일(~80%)
+4. UI/UX 및 기능
+* 인터페이스: 한국어, 의료용 Clean UI, 반응형 디자인
+* 기능: 실시간 계산, 초기화 버튼, 결과 클립보드 복사, 최근 계산 이력 저장(localStorage)
+* PWA: manifest.json, service-worker.js 포함하여 오프라인 작동 보장
+
