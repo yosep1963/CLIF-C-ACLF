@@ -94,9 +94,21 @@
 
                     <!-- 순환 (Circulation) -->
                     <div class="input-group">
-                        <label for="map">MAP (mmHg) - 순환 (Circulation)</label>
-                        <input type="number" id="map" min="20" max="200" step="1" placeholder="예: 75" required>
-                        <span class="hint">1점: ≥70 | 2점: &lt;70</span>
+                        <label>혈압 - 순환 (Circulation)</label>
+                        <div class="dual-input">
+                            <div class="dual-input-item">
+                                <label for="sbp">SBP (mmHg)</label>
+                                <input type="number" id="sbp" min="40" max="300" step="1" placeholder="예: 120" required>
+                            </div>
+                            <div class="dual-input-item">
+                                <label for="dbp">DBP (mmHg)</label>
+                                <input type="number" id="dbp" min="20" max="200" step="1" placeholder="예: 80" required>
+                            </div>
+                        </div>
+                        <div id="map-result" class="calculated-value">
+                            MAP: <span id="map-calculated">--</span> mmHg
+                        </div>
+                        <span class="hint">1점: MAP ≥70 | 2점: MAP &lt;70</span>
                         <div class="checkbox-group">
                             <input type="checkbox" id="vasopressors">
                             <label for="vasopressors">승압제 (Vasopressors) 사용 중 → 자동 3점</label>
@@ -112,9 +124,20 @@
                                 <input type="number" id="pao2" min="0" max="600" step="1" placeholder="예: 80" required>
                             </div>
                             <div class="dual-input-item">
-                                <label for="fio2">FiO₂ (%)</label>
-                                <input type="number" id="fio2" min="21" max="100" step="1" placeholder="예: 21" required>
+                                <label for="o2flow">O₂ 유량 (Nasal)</label>
+                                <select id="o2flow" required>
+                                    <option value="">선택하세요</option>
+                                    <option value="21">Room air (21%)</option>
+                                    <option value="24">1 L/min (24%)</option>
+                                    <option value="28">2 L/min (28%)</option>
+                                    <option value="32">3 L/min (32%)</option>
+                                    <option value="36">4 L/min (36%)</option>
+                                    <option value="40">5 L/min (40%)</option>
+                                </select>
                             </div>
+                        </div>
+                        <div id="fio2-result" class="calculated-value">
+                            FiO₂: <span id="fio2-calculated">--</span>%
                         </div>
                         <div id="pf-result" class="calculated-value">
                             P/F ratio: <span id="pf-ratio">--</span>
@@ -181,7 +204,7 @@
 
         <!-- 푸터 -->
         <footer>
-            <p>CLIF-C ACLF Score Calculator v1.0</p>
+            <p>CLIF-C ACLF Score Calculator v1.1</p>
             <p class="disclaimer">본 계산기는 참고용이며, 최종 진단 및 치료 결정은 반드시 전문의와 상담하세요.</p>
         </footer>
     </div>

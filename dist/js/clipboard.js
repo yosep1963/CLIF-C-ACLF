@@ -47,6 +47,16 @@ const Clipboard = {
             .map(([organ, score]) => `  - ${Calculator.organNames[organ]}: ${score}점`)
             .join('\n');
 
+        // SBP/DBP 표시 (새 버전) 또는 MAP만 표시 (이전 버전 호환)
+        const bpText = result.inputs.sbp !== undefined
+            ? `  - SBP/DBP: ${result.inputs.sbp}/${result.inputs.dbp} mmHg → MAP ${result.inputs.map} mmHg ${result.inputs.isVasopressors ? '(승압제 사용)' : ''}`
+            : `  - MAP: ${result.inputs.map} mmHg ${result.inputs.isVasopressors ? '(승압제 사용)' : ''}`;
+
+        // O2 유량 표시 (새 버전) 또는 FiO2만 표시 (이전 버전 호환)
+        const o2Text = result.inputs.o2flowText
+            ? `  - O₂ 유량: ${result.inputs.o2flowText}`
+            : `  - FiO₂: ${result.inputs.fio2 || '-'}%`;
+
         return `
 ═══════════════════════════════════
    CLIF-C ACLF 계산 결과
@@ -62,8 +72,9 @@ const Clipboard = {
   - Creatinine: ${result.inputs.creatinine} mg/dL ${result.inputs.isRRT ? '(RRT 중)' : ''}
   - HE Grade: ${result.inputs.heGrade}
   - INR: ${result.inputs.inr}
-  - MAP: ${result.inputs.map} mmHg ${result.inputs.isVasopressors ? '(승압제 사용)' : ''}
+${bpText}
   - PaO₂: ${result.inputs.pao2 || '-'} mmHg
+${o2Text}
   - FiO₂: ${result.inputs.fio2 || '-'}%
   - P/F ratio: ${Math.round(result.inputs.pf)}
 
