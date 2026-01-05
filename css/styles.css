@@ -1,0 +1,839 @@
+/**
+ * CLIF-C ACLF Score Calculator
+ * 스타일시트 (리팩터링 버전 v1.2)
+ */
+
+/* ==========================================================================
+   CSS 변수 정의
+   ========================================================================== */
+:root {
+    /* 색상 */
+    --primary-color: #1a73e8;
+    --primary-dark: #1557b0;
+    --primary-light: #e8f0fe;
+
+    /* 상태 색상 */
+    --success-color: #28a745;
+    --success-bg: #d4edda;
+    --warning-color: #856404;
+    --warning-bg: #fff3cd;
+    --danger-color: #721c24;
+    --danger-bg: #f8d7da;
+
+    /* 기본 색상 */
+    --bg-color: #f5f7fa;
+    --card-bg: #ffffff;
+    --text-primary: #202124;
+    --text-secondary: #5f6368;
+    --border-color: #dadce0;
+
+    /* 효과 */
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --radius: 12px;
+    --radius-sm: 8px;
+
+    /* 입력 필드 */
+    --input-padding: 14px 16px;
+    --input-font-size: 16px;
+}
+
+/* ==========================================================================
+   기본 리셋 및 설정
+   ========================================================================== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ==========================================================================
+   유틸리티 클래스 - 점수 색상
+   ========================================================================== */
+.score-1 {
+    background-color: var(--success-bg);
+    color: var(--success-color);
+}
+
+.score-2 {
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
+}
+
+.score-3 {
+    background-color: var(--danger-bg);
+    color: var(--danger-color);
+}
+
+.grade-low {
+    background-color: var(--success-bg);
+    color: var(--success-color);
+}
+
+.grade-moderate {
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
+}
+
+.grade-high {
+    background-color: var(--danger-bg);
+    color: var(--danger-color);
+}
+
+/* ==========================================================================
+   공통 입력 스타일
+   ========================================================================== */
+.form-input,
+.input-group input[type="number"],
+.input-group select,
+.dual-input-item input,
+.dual-input-item select {
+    width: 100%;
+    padding: var(--input-padding);
+    font-size: var(--input-font-size);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: #fff;
+    color: var(--text-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.form-input:focus,
+.input-group input[type="number"]:focus,
+.input-group select:focus,
+.dual-input-item input:focus,
+.dual-input-item select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.input-group input[type="number"]::placeholder,
+.dual-input-item input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* 셀렉트 화살표 */
+.input-group select,
+.dual-input-item select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6368' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+}
+
+/* 숫자 입력 스핀 버튼 숨기기 */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* ==========================================================================
+   레이아웃
+   ========================================================================== */
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+}
+
+/* ==========================================================================
+   헤더
+   ========================================================================== */
+header {
+    text-align: center;
+    padding: 20px 0;
+    margin-bottom: 16px;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+}
+
+header .subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   입력 섹션
+   ========================================================================== */
+.input-section {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+}
+
+.input-section h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary-light);
+}
+
+/* 입력 그룹 */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group:last-child {
+    margin-bottom: 0;
+}
+
+.input-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+/* 서브 라벨 */
+.sub-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    margin-top: 4px;
+}
+
+/* 힌트 텍스트 */
+.hint {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+/* 두 개 입력 필드 */
+.dual-input {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.dual-input-item {
+    flex: 1;
+}
+
+.dual-input-item label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+/* ==========================================================================
+   산소화 토글 (세그먼트 버튼)
+   ========================================================================== */
+.oxygen-type-toggle {
+    display: flex;
+    background-color: #f0f0f0;
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    margin-bottom: 16px;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #666;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.toggle-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 500;
+}
+
+.toggle-btn:hover:not(.active) {
+    background-color: #e0e0e0;
+}
+
+/* ==========================================================================
+   입력 필드 + 단위
+   ========================================================================== */
+.input-with-unit {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background-color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-with-unit:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.input-with-unit input {
+    flex: 1;
+    border: none;
+    padding: var(--input-padding);
+    font-size: var(--input-font-size);
+    background: transparent;
+    color: var(--text-primary);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.input-with-unit input:focus {
+    outline: none;
+}
+
+.input-with-unit .unit {
+    padding: var(--input-padding);
+    background-color: var(--bg-color);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-left: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   계산된 값 표시
+   ========================================================================== */
+.calculated-value {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background-color: var(--primary-light);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.calculated-value span {
+    font-weight: 700;
+    margin-left: 8px;
+    font-size: 1.1rem;
+}
+
+/* ==========================================================================
+   경고 메시지
+   ========================================================================== */
+.warning-message {
+    background-color: var(--warning-bg);
+    border: 1px solid #ffc107;
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    color: var(--warning-color);
+}
+
+/* ==========================================================================
+   체크박스 그룹
+   ========================================================================== */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    padding: 12px;
+    background-color: var(--bg-color);
+    border-radius: var(--radius-sm);
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.checkbox-group label {
+    margin-bottom: 0;
+    font-weight: 400;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+/* ==========================================================================
+   버튼
+   ========================================================================== */
+.button-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.btn-calculate,
+.btn-reset {
+    flex: 1;
+    padding: 16px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    min-height: 52px;
+}
+
+.btn-calculate {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-calculate:hover {
+    background-color: var(--primary-dark);
+}
+
+.btn-calculate:active {
+    transform: scale(0.98);
+}
+
+.btn-reset {
+    background-color: var(--bg-color);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-reset:hover {
+    background-color: #e8eaed;
+}
+
+/* 복사 버튼 */
+.btn-copy {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    background-color: var(--card-bg);
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.btn-copy:hover {
+    background-color: var(--primary-light);
+}
+
+.btn-copy.copied {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+    color: white;
+}
+
+/* ==========================================================================
+   결과 섹션
+   ========================================================================== */
+.result-section {
+    margin-top: 24px;
+}
+
+.result-section.hidden {
+    display: none;
+}
+
+.result-section h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+/* 결과 카드 */
+.result-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+}
+
+.result-card h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 점수 표시 */
+.score-display {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.score-display.large {
+    font-size: 3rem;
+}
+
+.score-display .unit {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+/* 장기별 점수 */
+.organ-breakdown {
+    margin-top: 16px;
+}
+
+.organ-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.organ-item:last-child {
+    border-bottom: none;
+}
+
+.organ-name {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.organ-score {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.organ-score .value {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.organ-score .indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.organ-score .indicator.score-1 {
+    background-color: var(--success-color);
+}
+
+.organ-score .indicator.score-2 {
+    background-color: #ffc107;
+}
+
+.organ-score .indicator.score-3 {
+    background-color: #dc3545;
+}
+
+/* ACLF 카드 */
+.aclf-card {
+    border: 2px solid var(--primary-color);
+}
+
+.grade-display {
+    text-align: center;
+    margin-top: 8px;
+    padding: 8px 16px;
+    background-color: var(--primary-light);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* 예후 카드 */
+.prognosis-card {
+    border-left: 4px solid;
+}
+
+.prognosis-card.prognosis-low {
+    border-left-color: var(--success-color);
+}
+
+.prognosis-card.prognosis-moderate {
+    border-left-color: #ffc107;
+}
+
+.prognosis-card.prognosis-high {
+    border-left-color: #dc3545;
+}
+
+.prognosis-content {
+    text-align: center;
+}
+
+.prognosis-level {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+}
+
+.mortality-info {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 12px;
+}
+
+.mortality-item {
+    text-align: center;
+}
+
+.mortality-item .label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.mortality-item .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+/* ==========================================================================
+   이력 섹션
+   ========================================================================== */
+.history-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+}
+
+.history-section h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--card-bg);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.history-item:hover {
+    box-shadow: var(--shadow);
+}
+
+.history-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.history-score {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.history-date {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.history-grade {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.btn-clear-history {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    background: none;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-clear-history:hover {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.history-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   푸터
+   ========================================================================== */
+footer {
+    margin-top: 32px;
+    padding: 24px 0;
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+}
+
+footer p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+footer .disclaimer {
+    font-size: 0.75rem;
+    color: #999;
+}
+
+/* ==========================================================================
+   토스트 메시지
+   ========================================================================== */
+.toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background-color: #333;
+    color: white;
+    border-radius: 24px;
+    font-size: 0.9rem;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   로딩 스피너
+   ========================================================================== */
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--primary-light);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================================================
+   반응형
+   ========================================================================== */
+@media (max-width: 400px) {
+    .container {
+        padding: 12px;
+    }
+
+    header h1 {
+        font-size: 1.3rem;
+    }
+
+    .input-section {
+        padding: 16px;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .mortality-info {
+        flex-direction: column;
+        gap: 12px;
+    }
+}
+
+/* iOS Safe Area */
+@supports (padding-top: env(safe-area-inset-top)) {
+    .container {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+    }
+}
+
+/* ==========================================================================
+   스크롤바 스타일 (Webkit)
+   ========================================================================== */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 3px;
+}

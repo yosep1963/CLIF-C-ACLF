@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="description" content="CLIF-C ACLF Score Calculator - 급성 만성 간부전 환자 예후 예측">
+
+    <!-- iOS PWA 설정 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CLIF-C ACLF">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+    <!-- PWA 매니페스트 -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- 파비콘 -->
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-72x72.png">
+
+    <!-- 스타일시트 -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <title>CLIF-C ACLF Score Calculator</title>
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header>
+            <h1>CLIF-C ACLF Score</h1>
+            <p class="subtitle">급성 만성 간부전 예후 예측</p>
+        </header>
+
+        <main>
+            <form id="calculator-form" novalidate>
+                <!-- 기본 정보 섹션 -->
+                <section class="input-section">
+                    <h2>기본 정보 (Basic Info)</h2>
+
+                    <div class="input-group">
+                        <label for="age">나이 (Age)</label>
+                        <input type="number" id="age" min="18" max="100" placeholder="18-100세" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="wbc">WBC (cells/uL)</label>
+                        <input type="number" id="wbc" min="100" max="100000" step="100" placeholder="예: 15000" required>
+                        <span class="hint">검사실 수치 그대로 입력</span>
+                    </div>
+                </section>
+
+                <!-- 장기별 입력 섹션 -->
+                <section class="input-section">
+                    <h2>장기별 수치 (Organ Parameters)</h2>
+
+                    <!-- 간 (Liver) -->
+                    <div class="input-group">
+                        <label for="bilirubin">Bilirubin (mg/dL) - 간 (Liver)</label>
+                        <input type="number" id="bilirubin" min="0" max="100" step="0.1" placeholder="예: 5.0" required>
+                        <span class="hint">1점: &lt;6 | 2점: 6-12 | 3점: &gt;12</span>
+                    </div>
+
+                    <!-- 신장 (Kidney) -->
+                    <div class="input-group">
+                        <label for="creatinine">Creatinine (mg/dL) - 신장 (Kidney)</label>
+                        <input type="number" id="creatinine" min="0" max="30" step="0.1" placeholder="예: 1.5" required>
+                        <span class="hint">1점: &lt;2 | 2점: 2-3.5 | 3점: &gt;3.5</span>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="rrt">
+                            <label for="rrt">RRT (신대체요법) 시행 중 → 자동 3점</label>
+                        </div>
+                    </div>
+
+                    <!-- 뇌 (Brain) -->
+                    <div class="input-group">
+                        <label for="heGrade">HE Grade (간성뇌증) - 뇌 (Brain)</label>
+                        <select id="heGrade" required>
+                            <option value="">선택하세요</option>
+                            <option value="0">Grade 0 (정상) → 1점</option>
+                            <option value="1">Grade 1 → 2점</option>
+                            <option value="2">Grade 2 → 2점</option>
+                            <option value="3">Grade 3 → 3점</option>
+                            <option value="4">Grade 4 → 3점</option>
+                        </select>
+                    </div>
+
+                    <!-- 응고 (Coagulation) -->
+                    <div class="input-group">
+                        <label for="inr">INR - 응고 (Coagulation)</label>
+                        <input type="number" id="inr" min="0" max="20" step="0.1" placeholder="예: 1.8" required>
+                        <span class="hint">1점: &lt;2.0 | 2점: 2.0-2.5 | 3점: &gt;2.5</span>
+                    </div>
+
+                    <!-- 순환 (Circulation) -->
+                    <div class="input-group">
+                        <label>혈압 - 순환 (Circulation)</label>
+                        <div class="dual-input">
+                            <div class="dual-input-item">
+                                <label for="sbp">SBP (mmHg)</label>
+                                <input type="number" id="sbp" min="40" max="300" step="1" placeholder="예: 120" required>
+                            </div>
+                            <div class="dual-input-item">
+                                <label for="dbp">DBP (mmHg)</label>
+                                <input type="number" id="dbp" min="20" max="200" step="1" placeholder="예: 80" required>
+                            </div>
+                        </div>
+                        <div id="map-result" class="calculated-value">
+                            MAP: <span id="map-calculated">--</span> mmHg
+                        </div>
+                        <span class="hint">1점: MAP ≥70 | 2점: MAP &lt;70</span>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="vasopressors">
+                            <label for="vasopressors">승압제 (Vasopressors) 사용 중 → 자동 3점</label>
+                        </div>
+                    </div>
+
+                    <!-- 호흡 (Respiration) -->
+                    <div class="input-group">
+                        <label>호흡 (Respiration) - P/F ratio</label>
+
+                        <!-- 산소화 지표 선택 토글 -->
+                        <label class="sub-label">산소화 지표 선택</label>
+                        <div id="oxygen-toggle-container" class="oxygen-type-toggle" style="display: flex; background-color: #f0f0f0; border-radius: 8px; padding: 4px; margin-bottom: 16px;">
+                            <button type="button" id="btn-pao2" class="toggle-btn active" data-type="pao2" onclick="selectOxygenType('pao2')" style="flex: 1; padding: 12px 16px; border: none; background-color: #1a73e8; color: white; font-weight: 500; cursor: pointer; font-size: 0.95rem; border-radius: 6px; font-family: inherit;">
+                                PaO₂ (동맥혈)
+                            </button>
+                            <button type="button" id="btn-spo2" class="toggle-btn" data-type="spo2" onclick="selectOxygenType('spo2')" style="flex: 1; padding: 12px 16px; border: none; background: transparent; color: #666; cursor: pointer; font-size: 0.95rem; border-radius: 6px; font-family: inherit;">
+                                SpO₂ (맥박산소측정)
+                            </button>
+                        </div>
+
+                        <!-- SpO2 사용 시 경고 문구 -->
+                        <div id="spo2-warning" class="warning-message" style="display: none;">
+                            ⚠️ SpO₂에서 추정된 PaO₂는 실제 값과 차이가 있을 수 있습니다.
+                        </div>
+
+                        <div class="dual-input">
+                            <!-- PaO2 입력 (기본 표시) -->
+                            <div class="dual-input-item" id="pao2-input-group">
+                                <label for="pao2">PaO₂</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="pao2" min="30" max="600" step="1" placeholder="30 - 600">
+                                    <span class="unit">mmHg</span>
+                                </div>
+                            </div>
+
+                            <!-- SpO2 입력 (초기 숨김) -->
+                            <div class="dual-input-item" id="spo2-input-group" style="display: none;">
+                                <label for="spo2">SpO₂</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="spo2" min="70" max="100" step="1" placeholder="70 - 100">
+                                    <span class="unit">%</span>
+                                </div>
+                            </div>
+
+                            <!-- O2 유량 입력 -->
+                            <div class="dual-input-item">
+                                <label for="o2flow">O₂ 유량</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="o2flow" min="0" max="5" step="1" placeholder="0 - 5" value="0">
+                                    <span class="unit">L/min</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="fio2-result" class="calculated-value">
+                            FiO₂: <span id="fio2-calculated">21</span>%
+                        </div>
+                        <div id="pf-result" class="calculated-value">
+                            P/F ratio: <span id="pf-ratio">--</span>
+                        </div>
+                        <span class="hint">1점: &gt;300 | 2점: 200-300 | 3점: ≤200</span>
+                    </div>
+                </section>
+
+                <!-- 버튼 섹션 -->
+                <div class="button-group">
+                    <button type="submit" class="btn-calculate">계산하기</button>
+                    <button type="reset" class="btn-reset">초기화</button>
+                </div>
+            </form>
+
+            <!-- 결과 섹션 -->
+            <section id="result-section" class="result-section hidden">
+                <h2>계산 결과</h2>
+
+                <!-- CLIF-C OF Score 카드 -->
+                <div class="result-card">
+                    <h3>CLIF-C OF Score</h3>
+                    <div id="of-score" class="score-display">
+                        <span class="value">--</span>
+                        <span class="unit">/ 18</span>
+                    </div>
+                    <div id="organ-breakdown" class="organ-breakdown">
+                        <!-- 장기별 점수가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+
+                <!-- CLIF-C ACLF Score 카드 -->
+                <div id="aclf-card" class="result-card aclf-card">
+                    <h3>CLIF-C ACLF Score</h3>
+                    <div id="aclf-score" class="score-display large">
+                        <span class="value">--</span>
+                    </div>
+                    <div id="aclf-grade" class="grade-display">
+                        <!-- ACLF Grade가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 예후 예측 카드 -->
+                <div id="prognosis-card" class="result-card prognosis-card">
+                    <h3>예후 예측 (Prognosis)</h3>
+                    <div id="prognosis-content" class="prognosis-content">
+                        <!-- 예후 정보가 여기에 표시됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 복사 버튼 -->
+                <button id="copy-btn" class="btn-copy">결과 클립보드에 복사</button>
+            </section>
+
+            <!-- 이력 섹션 -->
+            <section id="history-section" class="history-section">
+                <h2>최근 계산 이력</h2>
+                <div id="history-list" class="history-list">
+                    <!-- 이력이 여기에 표시됩니다 -->
+                </div>
+                <button id="clear-history" class="btn-clear-history">이력 전체 삭제</button>
+            </section>
+        </main>
+
+        <!-- 푸터 -->
+        <footer>
+            <p>CLIF-C ACLF Score Calculator v1.2.1</p>
+            <p class="disclaimer">본 계산기는 참고용이며, 최종 진단 및 치료 결정은 반드시 전문의와 상담하세요.</p>
+        </footer>
+    </div>
+
+    <!-- 토스트 메시지 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 토글 버튼 스크립트 (인라인) -->
+    <script>
+        function selectOxygenType(type) {
+            var btnPao2 = document.getElementById('btn-pao2');
+            var btnSpo2 = document.getElementById('btn-spo2');
+            var pao2Group = document.getElementById('pao2-input-group');
+            var spo2Group = document.getElementById('spo2-input-group');
+            var warning = document.getElementById('spo2-warning');
+
+            if (type === 'pao2') {
+                // PaO2 선택
+                btnPao2.style.backgroundColor = '#1a73e8';
+                btnPao2.style.color = 'white';
+                btnPao2.style.fontWeight = '500';
+                btnPao2.classList.add('active');
+
+                btnSpo2.style.backgroundColor = 'transparent';
+                btnSpo2.style.color = '#666';
+                btnSpo2.style.fontWeight = 'normal';
+                btnSpo2.classList.remove('active');
+
+                pao2Group.style.display = 'block';
+                spo2Group.style.display = 'none';
+                warning.style.display = 'none';
+            } else {
+                // SpO2 선택
+                btnSpo2.style.backgroundColor = '#1a73e8';
+                btnSpo2.style.color = 'white';
+                btnSpo2.style.fontWeight = '500';
+                btnSpo2.classList.add('active');
+
+                btnPao2.style.backgroundColor = 'transparent';
+                btnPao2.style.color = '#666';
+                btnPao2.style.fontWeight = 'normal';
+                btnPao2.classList.remove('active');
+
+                pao2Group.style.display = 'none';
+                spo2Group.style.display = 'block';
+                warning.style.display = 'block';
+            }
+
+            // P/F ratio 업데이트 (app.js의 함수 호출)
+            if (typeof updatePFRatioDisplay === 'function') {
+                updatePFRatioDisplay();
+            }
+        }
+    </script>
+
+    <!-- 스크립트 (의존성 순서대로 로드) -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/validation.js"></script>
+    <script src="js/calculator.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

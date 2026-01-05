@@ -1,0 +1,43 @@
+{
+    "name": "CLIF-C ACLF Score Calculator",
+    "short_name": "CLIF-C ACLF",
+    "description": "급성 만성 간부전 환자 예후 예측 계산기",
+    "start_url": "/index.html",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#f5f7fa",
+    "theme_color": "#1a73e8",
+    "orientation": "portrait",
+    "lang": "ko",
+    "categories": ["medical", "health", "utilities"],
+    "icons": [
+        {
+            "src": "icons/icon-72x72.png",
+            "sizes": "72x72",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/icon-96x96.png",
+            "sizes": "96x96",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "새 계산",
+            "short_name": "계산",
+            "description": "새로운 CLIF-C ACLF 점수 계산",
+            "url": "/index.html",
+            "icons": [
+                {
+                    "src": "icons/icon-96x96.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ],
+    "screenshots": [],
+    "prefer_related_applications": false
+}
