@@ -1,6 +1,6 @@
 /**
  * CLIF-C ACLF Score Calculator
- * 클립보드 복사 모듈
+ * 클립보드 복사 모듈 (리팩터링 버전)
  */
 
 const Clipboard = {
@@ -34,28 +34,13 @@ const Clipboard = {
      * @returns {string} 포맷된 텍스트
      */
     formatResultText(result) {
-        const date = new Date(result.timestamp);
-        const dateStr = date.toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        const dateStr = Utils.formatDate(result.timestamp, true);
 
-        const organScoreText = Object.entries(result.organScores)
-            .map(([organ, score]) => `  - ${Calculator.organNames[organ]}: ${score}점`)
-            .join('\n');
-
-        // SBP/DBP 표시 (새 버전) 또는 MAP만 표시 (이전 버전 호환)
-        const bpText = result.inputs.sbp !== undefined
-            ? `  - SBP/DBP: ${result.inputs.sbp}/${result.inputs.dbp} mmHg → MAP ${result.inputs.map} mmHg ${result.inputs.isVasopressors ? '(승압제 사용)' : ''}`
-            : `  - MAP: ${result.inputs.map} mmHg ${result.inputs.isVasopressors ? '(승압제 사용)' : ''}`;
-
-        // O2 유량 표시 (새 버전) 또는 FiO2만 표시 (이전 버전 호환)
-        const o2Text = result.inputs.o2flowText
-            ? `  - O₂ 유량: ${result.inputs.o2flowText}`
-            : `  - FiO₂: ${result.inputs.fio2 || '-'}%`;
+        const organScoreText = this._formatOrganScores(result.organScores);
+        const bpText = this._formatBloodPressure(result.inputs);
+        const oxygenText = this._formatOxygenation(result.inputs);
+        const o2Text = this._formatO2Flow(result.inputs);
+        const pfText = this._formatPFRatio(result.inputs);
 
         return `
 ═══════════════════════════════════
@@ -65,7 +50,7 @@ const Clipboard = {
 
 【환자 정보】
   - 나이(Age): ${result.inputs.age}세
-  - WBC: ${result.inputs.wbc.toLocaleString()} cells/uL
+  - WBC: ${Utils.formatNumber(result.inputs.wbc)} cells/uL
 
 【입력 수치】
   - Bilirubin: ${result.inputs.bilirubin} mg/dL
@@ -73,10 +58,10 @@ const Clipboard = {
   - HE Grade: ${result.inputs.heGrade}
   - INR: ${result.inputs.inr}
 ${bpText}
-  - PaO₂: ${result.inputs.pao2 || '-'} mmHg
+${oxygenText}
 ${o2Text}
   - FiO₂: ${result.inputs.fio2 || '-'}%
-  - P/F ratio: ${Math.round(result.inputs.pf)}
+${pfText}
 
 【CLIF-C OF Score: ${result.ofScore}/18】
 ${organScoreText}
@@ -98,13 +83,73 @@ ${organScoreText}
     },
 
     /**
+     * 장기별 점수 포맷팅
+     * @private
+     */
+    _formatOrganScores(organScores) {
+        return Object.entries(organScores)
+            .map(([organ, score]) => `  - ${Calculator.organNames[organ]}: ${score}점`)
+            .join('\n');
+    },
+
+    /**
+     * 혈압 정보 포맷팅
+     * @private
+     */
+    _formatBloodPressure(inputs) {
+        const vasopressorText = inputs.isVasopressors ? '(승압제 사용)' : '';
+
+        if (inputs.sbp !== undefined) {
+            return `  - SBP/DBP: ${inputs.sbp}/${inputs.dbp} mmHg → MAP ${inputs.map} mmHg ${vasopressorText}`;
+        }
+        return `  - MAP: ${inputs.map} mmHg ${vasopressorText}`;
+    },
+
+    /**
+     * 산소화 지표 포맷팅
+     * @private
+     */
+    _formatOxygenation(inputs) {
+        if (inputs.oxygenType === 'spo2') {
+            const estimatedPao2 = inputs.estimatedPao2
+                ? Math.round(inputs.estimatedPao2)
+                : '-';
+            return `  - SpO₂: ${inputs.spo2 || '-'}%
+  - 추정 PaO₂: ${estimatedPao2} mmHg (SpO₂ 기반 추정)`;
+        }
+        return `  - PaO₂: ${inputs.pao2 || '-'} mmHg`;
+    },
+
+    /**
+     * O2 유량 포맷팅
+     * @private
+     */
+    _formatO2Flow(inputs) {
+        if (inputs.o2flowText) {
+            return `  - O₂ 유량: ${inputs.o2flowText}`;
+        }
+        return `  - O₂ 유량: ${inputs.o2flow || 0} L/min`;
+    },
+
+    /**
+     * P/F ratio 포맷팅
+     * @private
+     */
+    _formatPFRatio(inputs) {
+        const pfValue = Math.round(inputs.pf);
+        if (inputs.oxygenType === 'spo2') {
+            return `  - P/F ratio (추정): ${pfValue}`;
+        }
+        return `  - P/F ratio: ${pfValue}`;
+    },
+
+    /**
      * Fallback 복사 방법 (execCommand)
      * @param {string} text - 복사할 텍스트
      * @returns {boolean} 성공 여부
      */
     fallbackCopy(text) {
         try {
-            // 임시 textarea 생성
             const textArea = document.createElement('textarea');
             textArea.value = text;
 
@@ -128,10 +173,7 @@ ${organScoreText}
                 textArea.select();
             }
 
-            // 복사 실행
             const success = document.execCommand('copy');
-
-            // 정리
             document.body.removeChild(textArea);
 
             return success;
@@ -151,7 +193,7 @@ ${organScoreText}
     }
 };
 
-// 모듈 내보내기 (브라우저 환경)
+// 모듈 내보내기
 if (typeof window !== 'undefined') {
     window.Clipboard = Clipboard;
 }

@@ -1,6 +1,6 @@
 /**
  * CLIF-C ACLF Score Calculator
- * 메인 앱 로직
+ * 메인 앱 로직 (리팩터링 버전)
  */
 
 (function() {
@@ -8,43 +8,49 @@
 
     // DOM 요소 캐싱
     const elements = {
-        form: document.getElementById('calculator-form'),
-        resultSection: document.getElementById('result-section'),
-        ofScore: document.getElementById('of-score'),
-        organBreakdown: document.getElementById('organ-breakdown'),
-        aclfScore: document.getElementById('aclf-score'),
-        aclfGrade: document.getElementById('aclf-grade'),
-        prognosisCard: document.getElementById('prognosis-card'),
-        prognosisContent: document.getElementById('prognosis-content'),
-        copyBtn: document.getElementById('copy-btn'),
-        historyList: document.getElementById('history-list'),
-        clearHistoryBtn: document.getElementById('clear-history'),
-        toast: document.getElementById('toast'),
-        pfResult: document.getElementById('pf-result'),
-        pfRatio: document.getElementById('pf-ratio'),
+        form: Utils.getElement('calculator-form'),
+        resultSection: Utils.getElement('result-section'),
+        ofScore: Utils.getElement('of-score'),
+        organBreakdown: Utils.getElement('organ-breakdown'),
+        aclfScore: Utils.getElement('aclf-score'),
+        aclfGrade: Utils.getElement('aclf-grade'),
+        prognosisCard: Utils.getElement('prognosis-card'),
+        prognosisContent: Utils.getElement('prognosis-content'),
+        copyBtn: Utils.getElement('copy-btn'),
+        historyList: Utils.getElement('history-list'),
+        clearHistoryBtn: Utils.getElement('clear-history'),
+        toast: Utils.getElement('toast'),
+        pfResult: Utils.getElement('pf-result'),
+        pfRatio: Utils.getElement('pf-ratio'),
         // 입력 필드
         inputs: {
-            age: document.getElementById('age'),
-            wbc: document.getElementById('wbc'),
-            bilirubin: document.getElementById('bilirubin'),
-            creatinine: document.getElementById('creatinine'),
-            rrt: document.getElementById('rrt'),
-            heGrade: document.getElementById('heGrade'),
-            inr: document.getElementById('inr'),
-            // MAP 관련 (SBP/DBP로 변경)
-            sbp: document.getElementById('sbp'),
-            dbp: document.getElementById('dbp'),
-            vasopressors: document.getElementById('vasopressors'),
-            // FiO2 관련 (O2 유량 선택으로 변경)
-            pao2: document.getElementById('pao2'),
-            o2flow: document.getElementById('o2flow')
+            age: Utils.getElement('age'),
+            wbc: Utils.getElement('wbc'),
+            bilirubin: Utils.getElement('bilirubin'),
+            creatinine: Utils.getElement('creatinine'),
+            rrt: Utils.getElement('rrt'),
+            heGrade: Utils.getElement('heGrade'),
+            inr: Utils.getElement('inr'),
+            sbp: Utils.getElement('sbp'),
+            dbp: Utils.getElement('dbp'),
+            vasopressors: Utils.getElement('vasopressors'),
+            pao2: Utils.getElement('pao2'),
+            spo2: Utils.getElement('spo2'),
+            o2flow: Utils.getElement('o2flow')
+        },
+        // 산소화 토글 관련 요소
+        oxygenToggle: {
+            pao2Group: Utils.getElement('pao2-input-group'),
+            spo2Group: Utils.getElement('spo2-input-group'),
+            warning: Utils.getElement('spo2-warning'),
+            toggleBtns: Utils.getElements('.toggle-btn')
         },
         // 계산된 값 표시 요소
         calculated: {
-            mapResult: document.getElementById('map-result'),
-            mapValue: document.getElementById('map-calculated'),
-            fio2Result: document.getElementById('fio2-result'),
-            fio2Value: document.getElementById('fio2-calculated')
+            mapResult: Utils.getElement('map-result'),
+            mapValue: Utils.getElement('map-calculated'),
+            fio2Result: Utils.getElement('fio2-result'),
+            fio2Value: Utils.getElement('fio2-calculated')
         }
     };
 
@@ -55,62 +61,95 @@
      * 앱 초기화
      */
     function init() {
-        // 이벤트 리스너 등록
+        setupEventListeners();
+        registerServiceWorker();
+        renderHistory();
+        updateFiO2Display();
+    }
+
+    /**
+     * 이벤트 리스너 설정
+     */
+    function setupEventListeners() {
+        // 폼 이벤트
         elements.form.addEventListener('submit', handleSubmit);
         elements.form.addEventListener('reset', handleReset);
         elements.copyBtn.addEventListener('click', handleCopy);
         elements.clearHistoryBtn.addEventListener('click', handleClearHistory);
 
-        // 서비스 워커 등록
-        registerServiceWorker();
-
-        // 이력 표시
-        renderHistory();
-
         // 입력 필드 실시간 검증
         Object.values(elements.inputs).forEach(input => {
             if (input && input.type === 'number') {
-                input.addEventListener('input', validateInput);
+                input.addEventListener('input', handleInputValidation);
             }
         });
 
-        // SBP/DBP 입력 시 MAP 자동 계산
-        elements.inputs.sbp.addEventListener('input', updateMAP);
-        elements.inputs.dbp.addEventListener('input', updateMAP);
-        elements.inputs.vasopressors.addEventListener('change', updateMAP);
+        // MAP 자동 계산
+        elements.inputs.sbp.addEventListener('input', updateMAPDisplay);
+        elements.inputs.dbp.addEventListener('input', updateMAPDisplay);
+        elements.inputs.vasopressors.addEventListener('change', updateMAPDisplay);
 
-        // O2 유량 선택 시 FiO2 자동 설정
-        elements.inputs.o2flow.addEventListener('change', updateFiO2FromO2Flow);
+        // FiO2 및 P/F ratio 자동 계산
+        elements.inputs.o2flow.addEventListener('input', updateFiO2Display);
+        elements.inputs.pao2.addEventListener('input', updatePFRatioDisplay);
+        elements.inputs.spo2.addEventListener('input', updatePFRatioDisplay);
 
-        // PaO2 입력 시 P/F ratio 업데이트
-        elements.inputs.pao2.addEventListener('input', updatePFRatio);
+        // 산소화 지표 토글
+        initOxygenTypeToggle();
     }
 
     /**
-     * SBP/DBP로 MAP 자동 계산 및 표시
-     * MAP = (SBP + 2 × DBP) / 3
+     * 산소화 지표 토글 버튼 초기화
+     * 인라인 onclick 핸들러가 주 역할을 담당하고, 이 함수는 백업용
      */
-    function updateMAP() {
-        const sbp = parseFloat(elements.inputs.sbp.value) || 0;
-        const dbp = parseFloat(elements.inputs.dbp.value) || 0;
+    function initOxygenTypeToggle() {
+        // 전역 selectOxygenType 함수가 없으면 백업 리스너 등록
+        if (typeof selectOxygenType !== 'function') {
+            elements.oxygenToggle.toggleBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    handleOxygenTypeChange(btn.dataset.type);
+                });
+            });
+        }
+    }
+
+    /**
+     * 현재 선택된 산소화 지표 유형 반환
+     */
+    function getSelectedOxygenType() {
+        const btnPao2 = document.getElementById('btn-pao2');
+        const btnSpo2 = document.getElementById('btn-spo2');
+
+        if (btnSpo2 && btnSpo2.classList.contains('active')) {
+            return 'spo2';
+        }
+        return 'pao2';
+    }
+
+    /**
+     * 산소화 지표 토글 변경 처리
+     */
+    function handleOxygenTypeChange(oxygenType) {
+        const isPao2 = oxygenType === 'pao2';
+        elements.oxygenToggle.pao2Group.style.display = isPao2 ? 'block' : 'none';
+        elements.oxygenToggle.spo2Group.style.display = isPao2 ? 'none' : 'block';
+        elements.oxygenToggle.warning.style.display = isPao2 ? 'none' : 'block';
+        updatePFRatioDisplay();
+    }
+
+    /**
+     * MAP 표시 업데이트
+     */
+    function updateMAPDisplay() {
+        const sbp = Utils.parseNumber(elements.inputs.sbp.value);
+        const dbp = Utils.parseNumber(elements.inputs.dbp.value);
 
         if (sbp > 0 && dbp > 0) {
-            const map = (sbp + 2 * dbp) / 3;
-            const roundedMap = Math.round(map);
+            const map = Utils.calculateMAP(sbp, dbp);
+            elements.calculated.mapValue.textContent = map;
 
-            elements.calculated.mapValue.textContent = roundedMap;
-
-            // 점수에 따른 색상 표시
-            let scoreClass = '';
-            if (elements.inputs.vasopressors.checked) {
-                scoreClass = 'score-3';
-            } else if (roundedMap >= 70) {
-                scoreClass = 'score-1';
-            } else {
-                scoreClass = 'score-2';
-            }
-
-            elements.calculated.mapResult.className = 'calculated-value ' + scoreClass;
+            const score = Utils.getMAPScore(map, elements.inputs.vasopressors.checked);
+            elements.calculated.mapResult.className = 'calculated-value ' + Utils.getScoreClass(score);
         } else {
             elements.calculated.mapValue.textContent = '--';
             elements.calculated.mapResult.className = 'calculated-value';
@@ -118,82 +157,42 @@
     }
 
     /**
-     * 계산된 MAP 값 반환
+     * FiO2 표시 업데이트
      */
-    function getCalculatedMAP() {
-        const sbp = parseFloat(elements.inputs.sbp.value) || 0;
-        const dbp = parseFloat(elements.inputs.dbp.value) || 0;
+    function updateFiO2Display() {
+        const o2flow = Utils.parseNumber(elements.inputs.o2flow.value);
+        const fio2 = Utils.calculateFiO2(o2flow);
 
-        if (sbp > 0 && dbp > 0) {
-            return Math.round((sbp + 2 * dbp) / 3);
-        }
-        return 0;
+        elements.calculated.fio2Value.textContent = fio2;
+        elements.calculated.fio2Result.className = 'calculated-value score-1';
+
+        updatePFRatioDisplay();
     }
 
     /**
-     * O2 유량 선택에 따른 FiO2 자동 설정
+     * P/F ratio 표시 업데이트
      */
-    function updateFiO2FromO2Flow() {
-        const o2flowSelect = elements.inputs.o2flow;
-        const selectedValue = o2flowSelect.value;
+    function updatePFRatioDisplay() {
+        const oxygenType = getSelectedOxygenType();
+        const o2flow = Utils.parseNumber(elements.inputs.o2flow.value);
+        const fio2 = Utils.calculateFiO2(o2flow);
 
-        if (selectedValue) {
-            const fio2 = parseInt(selectedValue);
-            elements.calculated.fio2Value.textContent = fio2;
-            elements.calculated.fio2Result.className = 'calculated-value score-1';
-
-            // P/F ratio도 업데이트
-            updatePFRatio();
+        let pao2Value;
+        if (oxygenType === 'pao2') {
+            pao2Value = Utils.parseNumber(elements.inputs.pao2.value);
         } else {
-            elements.calculated.fio2Value.textContent = '--';
-            elements.calculated.fio2Result.className = 'calculated-value';
+            const spo2 = Utils.parseNumber(elements.inputs.spo2.value);
+            pao2Value = Utils.convertSpO2ToPaO2(spo2);
         }
-    }
 
-    /**
-     * 현재 선택된 FiO2 값 반환
-     */
-    function getSelectedFiO2() {
-        const selectedValue = elements.inputs.o2flow.value;
-        return selectedValue ? parseInt(selectedValue) : 0;
-    }
+        const ratio = Utils.calculatePFRatio(pao2Value, fio2);
 
-    /**
-     * 현재 선택된 O2 유량 텍스트 반환
-     */
-    function getO2FlowText() {
-        const o2flowSelect = elements.inputs.o2flow;
-        if (o2flowSelect.value) {
-            return o2flowSelect.options[o2flowSelect.selectedIndex].text;
-        }
-        return '';
-    }
-
-    /**
-     * PaO2/FiO2 ratio 자동 계산 및 표시
-     */
-    function updatePFRatio() {
-        const pao2 = parseFloat(elements.inputs.pao2.value) || 0;
-        const fio2 = getSelectedFiO2(); // 드롭다운에서 선택된 값
-
-        if (pao2 > 0 && fio2 >= 21) {
-            // FiO2는 %로 선택됨 → /100
-            const ratio = pao2 / (fio2 / 100);
+        if (ratio > 0) {
             const roundedRatio = Math.round(ratio);
-
             elements.pfRatio.textContent = roundedRatio;
 
-            // 점수에 따른 색상 표시
-            let scoreClass = '';
-            if (roundedRatio > 300) {
-                scoreClass = 'score-1';
-            } else if (roundedRatio >= 200) {
-                scoreClass = 'score-2';
-            } else {
-                scoreClass = 'score-3';
-            }
-
-            elements.pfResult.className = 'calculated-value ' + scoreClass;
+            const score = Utils.getPFRatioScore(roundedRatio);
+            elements.pfResult.className = 'calculated-value ' + Utils.getScoreClass(score);
         } else {
             elements.pfRatio.textContent = '--';
             elements.pfResult.className = 'calculated-value';
@@ -201,16 +200,10 @@
     }
 
     /**
-     * P/F ratio 계산
+     * 개별 입력 필드 검증 핸들러
      */
-    function calculatePFRatio() {
-        const pao2 = parseFloat(elements.inputs.pao2.value) || 0;
-        const fio2 = getSelectedFiO2();
-
-        if (pao2 > 0 && fio2 >= 21) {
-            return pao2 / (fio2 / 100);
-        }
-        return 0;
+    function handleInputValidation(e) {
+        Validator.validateInputElement(e.target);
     }
 
     /**
@@ -219,25 +212,20 @@
     function handleSubmit(e) {
         e.preventDefault();
 
-        // 입력값 수집
         const inputs = getInputValues();
+        const validation = Validator.validate(inputs);
 
-        // 유효성 검사
-        if (!validateInputs(inputs)) {
+        if (!validation.isValid) {
+            Utils.showToast(validation.errors[0]);
             return;
         }
 
-        // 계산 실행
         currentResult = Calculator.calculate(inputs);
-
-        // 결과 표시
         displayResults(currentResult);
 
-        // 이력에 저장
         Storage.saveToHistory(currentResult);
         renderHistory();
 
-        // 결과 섹션으로 스크롤
         elements.resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -245,137 +233,73 @@
      * 입력값 수집
      */
     function getInputValues() {
-        const pao2 = parseFloat(elements.inputs.pao2.value) || 0;
-        const fio2 = getSelectedFiO2();
-        const pf = calculatePFRatio();
+        const oxygenType = getSelectedOxygenType();
+        const pao2 = Utils.parseNumber(elements.inputs.pao2.value);
+        const spo2 = Utils.parseNumber(elements.inputs.spo2.value);
+        const o2flow = Utils.parseNumber(elements.inputs.o2flow.value);
+        const fio2 = Utils.calculateFiO2(o2flow);
 
-        const sbp = parseFloat(elements.inputs.sbp.value) || 0;
-        const dbp = parseFloat(elements.inputs.dbp.value) || 0;
-        const map = getCalculatedMAP();
+        const estimatedPao2 = oxygenType === 'spo2' ? Utils.convertSpO2ToPaO2(spo2) : null;
+        const pao2ForCalc = oxygenType === 'pao2' ? pao2 : estimatedPao2;
+        const pf = Utils.calculatePFRatio(pao2ForCalc, fio2);
+
+        const sbp = Utils.parseNumber(elements.inputs.sbp.value);
+        const dbp = Utils.parseNumber(elements.inputs.dbp.value);
+        const map = Utils.calculateMAP(sbp, dbp);
 
         return {
-            age: parseFloat(elements.inputs.age.value) || 0,
-            wbc: parseFloat(elements.inputs.wbc.value) || 0,
-            bilirubin: parseFloat(elements.inputs.bilirubin.value) || 0,
-            creatinine: parseFloat(elements.inputs.creatinine.value) || 0,
+            age: Utils.parseNumber(elements.inputs.age.value),
+            wbc: Utils.parseNumber(elements.inputs.wbc.value),
+            bilirubin: Utils.parseNumber(elements.inputs.bilirubin.value),
+            creatinine: Utils.parseNumber(elements.inputs.creatinine.value),
             isRRT: elements.inputs.rrt.checked,
             heGrade: parseInt(elements.inputs.heGrade.value) || 0,
-            inr: parseFloat(elements.inputs.inr.value) || 0,
-            // MAP 관련 (새 필드)
+            inr: Utils.parseNumber(elements.inputs.inr.value),
             sbp: sbp,
             dbp: dbp,
-            map: map, // 계산된 MAP 값 (calculator.js 호환성 유지)
+            map: map,
             isVasopressors: elements.inputs.vasopressors.checked,
-            // 호흡 관련 (새 필드)
-            pao2: pao2,
-            o2flow: elements.inputs.o2flow.value, // "21", "24", ... 문자열
-            o2flowText: getO2FlowText(), // "Room air (21%)" 등
-            fio2: fio2, // 숫자 값 (calculator.js 호환성 유지)
+            oxygenType: oxygenType,
+            pao2: oxygenType === 'pao2' ? pao2 : null,
+            spo2: oxygenType === 'spo2' ? spo2 : null,
+            estimatedPao2: estimatedPao2,
+            o2flow: o2flow,
+            o2flowText: Utils.getO2FlowText(o2flow),
+            fio2: fio2,
             pf: pf
         };
-    }
-
-    /**
-     * 입력값 유효성 검사
-     */
-    function validateInputs(inputs) {
-        const errors = [];
-
-        if (inputs.age < 18 || inputs.age > 100) {
-            errors.push('나이는 18-100세 범위여야 합니다.');
-        }
-        if (inputs.wbc < 100 || inputs.wbc > 100000) {
-            errors.push('WBC 값을 확인해주세요.');
-        }
-        if (inputs.bilirubin < 0) {
-            errors.push('Bilirubin 값을 확인해주세요.');
-        }
-        if (inputs.creatinine < 0) {
-            errors.push('Creatinine 값을 확인해주세요.');
-        }
-        if (elements.inputs.heGrade.value === '') {
-            errors.push('HE Grade를 선택해주세요.');
-        }
-        if (inputs.inr < 0) {
-            errors.push('INR 값을 확인해주세요.');
-        }
-        // SBP/DBP 검증 (MAP 직접 입력 대신)
-        if (inputs.sbp < 40 || inputs.sbp > 300) {
-            errors.push('SBP 값을 확인해주세요 (40-300 mmHg).');
-        }
-        if (inputs.dbp < 20 || inputs.dbp > 200) {
-            errors.push('DBP 값을 확인해주세요 (20-200 mmHg).');
-        }
-        if (inputs.map < 20 || inputs.map > 200) {
-            errors.push('계산된 MAP 값이 유효하지 않습니다.');
-        }
-        if (inputs.pao2 <= 0 || inputs.pao2 > 600) {
-            errors.push('PaO₂ 값을 확인해주세요 (0-600 mmHg).');
-        }
-        // O2 유량 선택 확인 (FiO2 직접 입력 대신)
-        if (!elements.inputs.o2flow.value) {
-            errors.push('O₂ 유량을 선택해주세요.');
-        }
-
-        if (errors.length > 0) {
-            showToast(errors[0]);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * 개별 입력 필드 검증
-     */
-    function validateInput(e) {
-        const input = e.target;
-        const value = parseFloat(input.value);
-        const min = parseFloat(input.min);
-        const max = parseFloat(input.max);
-
-        if (value < min || value > max) {
-            input.style.borderColor = '#dc3545';
-        } else {
-            input.style.borderColor = '';
-        }
     }
 
     /**
      * 결과 표시
      */
     function displayResults(result) {
-        // 결과 섹션 표시
         elements.resultSection.classList.remove('hidden');
 
-        // OF Score 표시
+        // OF Score
         elements.ofScore.innerHTML = `
             <span class="value">${result.ofScore}</span>
             <span class="unit">/ 18</span>
         `;
 
-        // 장기별 점수 표시
+        // 장기별 점수
         elements.organBreakdown.innerHTML = Object.entries(result.organScores)
             .map(([organ, score]) => `
                 <div class="organ-item">
                     <span class="organ-name">${Calculator.organNames[organ]}</span>
                     <span class="organ-score">
-                        <span class="indicator score-${score}"></span>
+                        <span class="indicator ${Utils.getScoreClass(score)}"></span>
                         <span class="value">${score}점</span>
                     </span>
                 </div>
             `).join('');
 
-        // ACLF Score 표시
+        // ACLF Score & Grade
         elements.aclfScore.innerHTML = `<span class="value">${result.aclfScore}</span>`;
-
-        // ACLF Grade 표시
         elements.aclfGrade.textContent = `${result.aclfGrade.grade} (${result.aclfGrade.count}개 장기부전)`;
 
-        // 예후 카드 스타일 적용
+        // 예후
         elements.prognosisCard.className = `result-card prognosis-card prognosis-${result.prognosis.level}`;
-
-        // 예후 내용 표시
         elements.prognosisContent.innerHTML = `
             <div class="prognosis-level" style="background-color: ${result.prognosis.bgColor}; color: ${result.prognosis.color};">
                 ${result.prognosis.message}
@@ -397,26 +321,39 @@
      * 폼 초기화 처리
      */
     function handleReset() {
-        // 결과 섹션 숨기기
         setTimeout(() => {
             elements.resultSection.classList.add('hidden');
             currentResult = null;
+
             // 입력 필드 스타일 초기화
             Object.values(elements.inputs).forEach(input => {
-                if (input) {
-                    input.style.borderColor = '';
-                }
+                if (input) input.style.borderColor = '';
             });
-            // MAP 계산 초기화
+
+            // 계산 값 초기화
             elements.calculated.mapValue.textContent = '--';
             elements.calculated.mapResult.className = 'calculated-value';
-            // FiO2 계산 초기화
-            elements.calculated.fio2Value.textContent = '--';
-            elements.calculated.fio2Result.className = 'calculated-value';
-            // P/F ratio 초기화
+            elements.calculated.fio2Value.textContent = Config.FIO2.ROOM_AIR;
+            elements.calculated.fio2Result.className = 'calculated-value score-1';
             elements.pfRatio.textContent = '--';
             elements.pfResult.className = 'calculated-value';
+
+            // 산소화 토글 초기화
+            resetOxygenToggle();
+
+            // O2 유량 기본값
+            elements.inputs.o2flow.value = '0';
         }, 0);
+    }
+
+    /**
+     * 산소화 토글 초기화
+     */
+    function resetOxygenToggle() {
+        // 전역 selectOxygenType 함수 사용
+        if (typeof selectOxygenType === 'function') {
+            selectOxygenType('pao2');
+        }
     }
 
     /**
@@ -424,7 +361,7 @@
      */
     async function handleCopy() {
         if (!currentResult) {
-            showToast('계산 결과가 없습니다.');
+            Utils.showToast('계산 결과가 없습니다.');
             return;
         }
 
@@ -433,14 +370,14 @@
         if (success) {
             elements.copyBtn.classList.add('copied');
             elements.copyBtn.textContent = '복사 완료!';
-            showToast('클립보드에 복사되었습니다.');
+            Utils.showToast('클립보드에 복사되었습니다.');
 
             setTimeout(() => {
                 elements.copyBtn.classList.remove('copied');
                 elements.copyBtn.textContent = '결과 클립보드에 복사';
             }, 2000);
         } else {
-            showToast('복사에 실패했습니다.');
+            Utils.showToast('복사에 실패했습니다.');
         }
     }
 
@@ -451,7 +388,7 @@
         if (confirm('모든 계산 이력을 삭제하시겠습니까?')) {
             Storage.clearHistory();
             renderHistory();
-            showToast('이력이 삭제되었습니다.');
+            Utils.showToast('이력이 삭제되었습니다.');
         }
     }
 
@@ -468,33 +405,21 @@
         }
 
         elements.clearHistoryBtn.style.display = 'block';
-
-        elements.historyList.innerHTML = history.map((item, index) => {
-            const date = new Date(item.timestamp);
-            const dateStr = date.toLocaleDateString('ko-KR', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            return `
-                <div class="history-item" data-index="${index}">
-                    <div class="history-info">
-                        <span class="history-score">ACLF Score: ${item.aclfScore}</span>
-                        <span class="history-date">${dateStr}</span>
-                    </div>
-                    <span class="history-grade grade-${item.prognosis.level}">${item.aclfGrade.grade}</span>
+        elements.historyList.innerHTML = history.map((item, index) => `
+            <div class="history-item" data-index="${index}">
+                <div class="history-info">
+                    <span class="history-score">ACLF Score: ${item.aclfScore}</span>
+                    <span class="history-date">${Utils.formatDate(item.timestamp, true)}</span>
                 </div>
-            `;
-        }).join('');
+                <span class="history-grade grade-${item.prognosis.level}">${item.aclfGrade.grade}</span>
+            </div>
+        `).join('');
 
-        // 이력 아이템 클릭 이벤트
+        // 클릭 이벤트
         elements.historyList.querySelectorAll('.history-item').forEach(item => {
             item.addEventListener('click', () => {
                 const index = parseInt(item.dataset.index);
-                const historyItem = history[index];
-                loadHistoryItem(historyItem);
+                loadHistoryItem(history[index]);
             });
         });
     }
@@ -503,7 +428,7 @@
      * 이력 아이템 불러오기
      */
     function loadHistoryItem(item) {
-        // 입력값 복원
+        // 기본 입력값 복원
         elements.inputs.age.value = item.inputs.age;
         elements.inputs.wbc.value = item.inputs.wbc;
         elements.inputs.bilirubin.value = item.inputs.bilirubin;
@@ -513,69 +438,79 @@
         elements.inputs.inr.value = item.inputs.inr;
         elements.inputs.vasopressors.checked = item.inputs.isVasopressors;
 
-        // SBP/DBP 복원 (새 버전)
-        if (item.inputs.sbp !== undefined) {
-            elements.inputs.sbp.value = item.inputs.sbp;
-            elements.inputs.dbp.value = item.inputs.dbp;
-            updateMAP();
-        } else {
-            // 이전 버전 호환성 (MAP만 저장된 경우)
-            // SBP/DBP를 역산할 수 없으므로 대략적 추정
-            const map = item.inputs.map || 70;
-            // 가정: DBP ≈ MAP * 0.9, SBP ≈ MAP * 1.2 (근사치)
-            elements.inputs.dbp.value = Math.round(map * 0.9);
-            elements.inputs.sbp.value = Math.round(map * 1.2);
-            updateMAP();
-        }
+        // SBP/DBP 복원
+        restoreBloodPressure(item.inputs);
 
-        // O2 유량 복원 (새 버전)
-        if (item.inputs.o2flow !== undefined) {
-            elements.inputs.o2flow.value = item.inputs.o2flow;
-            updateFiO2FromO2Flow();
-        } else {
-            // 이전 버전 호환성 (FiO2만 저장된 경우)
-            const fio2 = item.inputs.fio2 || 21;
-            // 가장 가까운 O2 유량 선택
-            const fio2Options = [21, 24, 28, 32, 36, 40];
-            const closestFio2 = fio2Options.reduce((prev, curr) =>
-                Math.abs(curr - fio2) < Math.abs(prev - fio2) ? curr : prev
-            );
-            elements.inputs.o2flow.value = closestFio2.toString();
-            updateFiO2FromO2Flow();
-        }
-
-        // PaO2 복원
-        if (item.inputs.pao2 !== undefined) {
-            elements.inputs.pao2.value = item.inputs.pao2;
-        } else {
-            // 이전 버전 호환성 (pf만 저장된 경우)
-            const fio2 = getSelectedFiO2() || 21;
-            elements.inputs.pao2.value = Math.round((item.inputs.pf || 300) * (fio2 / 100));
-        }
-
-        // P/F ratio 업데이트
-        updatePFRatio();
+        // 산소화 지표 복원
+        restoreOxygenation(item.inputs);
 
         // 결과 표시
         currentResult = item;
         displayResults(item);
 
-        // 상단으로 스크롤
         window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        showToast('이전 계산을 불러왔습니다.');
+        Utils.showToast('이전 계산을 불러왔습니다.');
     }
 
     /**
-     * 토스트 메시지 표시
+     * 혈압 값 복원
      */
-    function showToast(message, duration = 2500) {
-        elements.toast.textContent = message;
-        elements.toast.classList.add('show');
+    function restoreBloodPressure(inputs) {
+        if (inputs.sbp !== undefined) {
+            elements.inputs.sbp.value = inputs.sbp;
+            elements.inputs.dbp.value = inputs.dbp;
+        } else {
+            // 이전 버전 호환성
+            const map = inputs.map || 70;
+            elements.inputs.dbp.value = Math.round(map * 0.9);
+            elements.inputs.sbp.value = Math.round(map * 1.2);
+        }
+        updateMAPDisplay();
+    }
 
-        setTimeout(() => {
-            elements.toast.classList.remove('show');
-        }, duration);
+    /**
+     * 산소화 지표 복원
+     */
+    function restoreOxygenation(inputs) {
+        const oxygenType = inputs.oxygenType || 'pao2';
+
+        // 전역 selectOxygenType 함수 사용하여 토글 상태 설정
+        if (typeof selectOxygenType === 'function') {
+            selectOxygenType(oxygenType);
+        }
+
+        // O2 유량 복원
+        restoreO2Flow(inputs);
+
+        // PaO2/SpO2 값 복원
+        if (oxygenType === 'spo2' && inputs.spo2 !== undefined) {
+            elements.inputs.spo2.value = inputs.spo2;
+        } else if (inputs.pao2 !== undefined && inputs.pao2 !== null) {
+            elements.inputs.pao2.value = inputs.pao2;
+        } else {
+            // 이전 버전 호환성
+            const fio2 = Utils.calculateFiO2(Utils.parseNumber(elements.inputs.o2flow.value));
+            elements.inputs.pao2.value = Math.round((inputs.pf || 300) * (fio2 / 100));
+        }
+
+        updatePFRatioDisplay();
+    }
+
+    /**
+     * O2 유량 복원
+     */
+    function restoreO2Flow(inputs) {
+        if (typeof inputs.o2flow === 'number') {
+            elements.inputs.o2flow.value = inputs.o2flow;
+        } else if (inputs.o2flow !== undefined) {
+            // 이전 버전 호환성 (드롭다운 문자열)
+            const fio2 = parseInt(inputs.o2flow) || Config.FIO2.ROOM_AIR;
+            elements.inputs.o2flow.value = Math.max(0, Math.round((fio2 - Config.FIO2.ROOM_AIR) / Config.FIO2.PER_LITER));
+        } else if (inputs.fio2) {
+            // FiO2에서 역산
+            elements.inputs.o2flow.value = Math.max(0, Math.round((inputs.fio2 - Config.FIO2.ROOM_AIR) / Config.FIO2.PER_LITER));
+        }
+        updateFiO2Display();
     }
 
     /**
@@ -585,15 +520,15 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker 등록 성공:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('ServiceWorker 등록 실패:', error);
-                    });
+                    .then(reg => console.log('ServiceWorker 등록 성공:', reg.scope))
+                    .catch(err => console.log('ServiceWorker 등록 실패:', err));
             });
         }
     }
+
+    // 전역 함수 노출 (인라인 스크립트에서 호출용)
+    window.updatePFRatioDisplay = updatePFRatioDisplay;
+    window.getSelectedOxygenType = getSelectedOxygenType;
 
     // DOM 로드 완료 후 초기화
     if (document.readyState === 'loading') {

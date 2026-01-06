@@ -1,9 +1,28 @@
 /**
  * CLIF-C ACLF Score Calculator
- * 계산 로직 모듈
+ * 계산 로직 모듈 (리팩터링 버전)
  */
 
 const Calculator = {
+    /**
+     * 장기 이름 매핑 (Config에서 가져옴)
+     */
+    get organNames() {
+        return Config.ORGAN_NAMES;
+    },
+
+    /**
+     * 장기별 지표 이름
+     */
+    organIndicators: {
+        liver: 'Bilirubin',
+        kidney: 'Creatinine',
+        brain: 'HE Grade',
+        coagulation: 'INR',
+        circulation: 'MAP',
+        respiration: 'PaO₂/FiO₂'
+    },
+
     /**
      * 각 장기별 OF Score 계산
      * @param {Object} inputs - 입력값 객체
@@ -11,68 +30,82 @@ const Calculator = {
      */
     calculateOrganScores(inputs) {
         const scores = {};
+        const thresholds = Config.SCORE_THRESHOLDS;
 
         // 1. 간 (Liver) - Bilirubin
-        if (inputs.bilirubin < 6) {
-            scores.liver = 1;
-        } else if (inputs.bilirubin <= 12) {
-            scores.liver = 2;
-        } else {
-            scores.liver = 3;
-        }
+        scores.liver = this._calculateLiverScore(inputs.bilirubin, thresholds.bilirubin);
 
         // 2. 신장 (Kidney) - Creatinine + RRT
-        if (inputs.isRRT) {
-            scores.kidney = 3;
-        } else {
-            if (inputs.creatinine < 2) {
-                scores.kidney = 1;
-            } else if (inputs.creatinine <= 3.5) {
-                scores.kidney = 2;
-            } else {
-                scores.kidney = 3;
-            }
-        }
+        scores.kidney = this._calculateKidneyScore(inputs.creatinine, inputs.isRRT, thresholds.creatinine);
 
         // 3. 뇌 (Brain) - HE Grade
-        if (inputs.heGrade === 0) {
-            scores.brain = 1;
-        } else if (inputs.heGrade <= 2) {
-            scores.brain = 2;
-        } else {
-            scores.brain = 3;
-        }
+        scores.brain = this._calculateBrainScore(inputs.heGrade);
 
         // 4. 응고 (Coagulation) - INR
-        if (inputs.inr < 2.0) {
-            scores.coagulation = 1;
-        } else if (inputs.inr <= 2.5) {
-            scores.coagulation = 2;
-        } else {
-            scores.coagulation = 3;
-        }
+        scores.coagulation = this._calculateCoagulationScore(inputs.inr, thresholds.inr);
 
         // 5. 순환 (Circulation) - MAP + Vasopressors
-        if (inputs.isVasopressors) {
-            scores.circulation = 3;
-        } else {
-            if (inputs.map >= 70) {
-                scores.circulation = 1;
-            } else {
-                scores.circulation = 2;
-            }
-        }
+        scores.circulation = this._calculateCirculationScore(inputs.map, inputs.isVasopressors);
 
         // 6. 호흡 (Respiration) - PaO2/FiO2
-        if (inputs.pf > 300) {
-            scores.respiration = 1;
-        } else if (inputs.pf >= 200) {
-            scores.respiration = 2;
-        } else {
-            scores.respiration = 3;
-        }
+        scores.respiration = this._calculateRespirationScore(inputs.pf, thresholds.pf);
 
         return scores;
+    },
+
+    /**
+     * 간 점수 계산
+     * @private
+     */
+    _calculateLiverScore(bilirubin, thresholds) {
+        if (bilirubin < thresholds.score1.max) return 1;
+        if (bilirubin <= thresholds.score2.max) return 2;
+        return 3;
+    },
+
+    /**
+     * 신장 점수 계산
+     * @private
+     */
+    _calculateKidneyScore(creatinine, isRRT, thresholds) {
+        if (isRRT) return 3;
+        if (creatinine < thresholds.score1.max) return 1;
+        if (creatinine <= thresholds.score2.max) return 2;
+        return 3;
+    },
+
+    /**
+     * 뇌 점수 계산 (HE Grade 기반)
+     * @private
+     */
+    _calculateBrainScore(heGrade) {
+        return Config.HE_GRADE_SCORES[heGrade] || 1;
+    },
+
+    /**
+     * 응고 점수 계산
+     * @private
+     */
+    _calculateCoagulationScore(inr, thresholds) {
+        if (inr < thresholds.score1.max) return 1;
+        if (inr <= thresholds.score2.max) return 2;
+        return 3;
+    },
+
+    /**
+     * 순환 점수 계산
+     * @private
+     */
+    _calculateCirculationScore(map, isVasopressors) {
+        return Utils.getMAPScore(map, isVasopressors);
+    },
+
+    /**
+     * 호흡 점수 계산
+     * @private
+     */
+    _calculateRespirationScore(pf, thresholds) {
+        return Utils.getPFRatioScore(pf);
     },
 
     /**
@@ -136,29 +169,25 @@ const Calculator = {
      * @returns {Object} 예후 정보
      */
     getPrognosis(score) {
+        const prognosis = Config.PROGNOSIS;
+
         if (score < 45) {
             return {
-                level: 'low',
-                color: '#28a745', // 초록색
-                bgColor: '#d4edda',
+                ...prognosis.LOW,
                 mortality28: '약 10%',
                 mortality90: '약 20%',
                 message: '비교적 양호한 예후'
             };
         } else if (score <= 60) {
             return {
-                level: 'moderate',
-                color: '#856404', // 노란색 텍스트
-                bgColor: '#fff3cd',
+                ...prognosis.MODERATE,
                 mortality28: '30-40%',
                 mortality90: '약 50%',
                 message: '중등도 위험군'
             };
         } else {
             return {
-                level: 'high',
-                color: '#721c24', // 빨간색 텍스트
-                bgColor: '#f8d7da',
+                ...prognosis.HIGH,
                 mortality28: '60-70%',
                 mortality90: '약 80%',
                 message: '고위험군'
@@ -187,34 +216,10 @@ const Calculator = {
             prognosis,
             timestamp: new Date().toISOString()
         };
-    },
-
-    /**
-     * 장기 이름 매핑 (한국어 + 영어)
-     */
-    organNames: {
-        liver: '간 (Liver)',
-        kidney: '신장 (Kidney)',
-        brain: '뇌 (Brain)',
-        coagulation: '응고 (Coagulation)',
-        circulation: '순환 (Circulation)',
-        respiration: '호흡 (Respiration)'
-    },
-
-    /**
-     * 장기별 지표 이름
-     */
-    organIndicators: {
-        liver: 'Bilirubin',
-        kidney: 'Creatinine',
-        brain: 'HE Grade',
-        coagulation: 'INR',
-        circulation: 'MAP',
-        respiration: 'PaO₂/FiO₂'
     }
 };
 
-// 모듈 내보내기 (브라우저 환경)
+// 모듈 내보내기
 if (typeof window !== 'undefined') {
     window.Calculator = Calculator;
 }

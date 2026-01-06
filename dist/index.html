@@ -117,27 +117,54 @@
 
                     <!-- 호흡 (Respiration) -->
                     <div class="input-group">
-                        <label>호흡 (Respiration) - PaO₂/FiO₂</label>
+                        <label>호흡 (Respiration) - P/F ratio</label>
+
+                        <!-- 산소화 지표 선택 토글 -->
+                        <label class="sub-label">산소화 지표 선택</label>
+                        <div id="oxygen-toggle-container" class="oxygen-type-toggle" style="display: flex; background-color: #f0f0f0; border-radius: 8px; padding: 4px; margin-bottom: 16px;">
+                            <button type="button" id="btn-pao2" class="toggle-btn active" data-type="pao2" onclick="selectOxygenType('pao2')" style="flex: 1; padding: 12px 16px; border: none; background-color: #1a73e8; color: white; font-weight: 500; cursor: pointer; font-size: 0.95rem; border-radius: 6px; font-family: inherit;">
+                                PaO₂ (동맥혈)
+                            </button>
+                            <button type="button" id="btn-spo2" class="toggle-btn" data-type="spo2" onclick="selectOxygenType('spo2')" style="flex: 1; padding: 12px 16px; border: none; background: transparent; color: #666; cursor: pointer; font-size: 0.95rem; border-radius: 6px; font-family: inherit;">
+                                SpO₂ (맥박산소측정)
+                            </button>
+                        </div>
+
+                        <!-- SpO2 사용 시 경고 문구 -->
+                        <div id="spo2-warning" class="warning-message" style="display: none;">
+                            ⚠️ SpO₂에서 추정된 PaO₂는 실제 값과 차이가 있을 수 있습니다.
+                        </div>
+
                         <div class="dual-input">
-                            <div class="dual-input-item">
-                                <label for="pao2">PaO₂ (mmHg)</label>
-                                <input type="number" id="pao2" min="0" max="600" step="1" placeholder="예: 80" required>
+                            <!-- PaO2 입력 (기본 표시) -->
+                            <div class="dual-input-item" id="pao2-input-group">
+                                <label for="pao2">PaO₂</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="pao2" min="30" max="600" step="1" placeholder="30 - 600">
+                                    <span class="unit">mmHg</span>
+                                </div>
                             </div>
+
+                            <!-- SpO2 입력 (초기 숨김) -->
+                            <div class="dual-input-item" id="spo2-input-group" style="display: none;">
+                                <label for="spo2">SpO₂</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="spo2" min="70" max="100" step="1" placeholder="70 - 100">
+                                    <span class="unit">%</span>
+                                </div>
+                            </div>
+
+                            <!-- O2 유량 입력 -->
                             <div class="dual-input-item">
-                                <label for="o2flow">O₂ 유량 (Nasal)</label>
-                                <select id="o2flow" required>
-                                    <option value="">선택하세요</option>
-                                    <option value="21">Room air (21%)</option>
-                                    <option value="24">1 L/min (24%)</option>
-                                    <option value="28">2 L/min (28%)</option>
-                                    <option value="32">3 L/min (32%)</option>
-                                    <option value="36">4 L/min (36%)</option>
-                                    <option value="40">5 L/min (40%)</option>
-                                </select>
+                                <label for="o2flow">O₂ 유량</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="o2flow" min="0" max="5" step="1" placeholder="0 - 5" value="0">
+                                    <span class="unit">L/min</span>
+                                </div>
                             </div>
                         </div>
                         <div id="fio2-result" class="calculated-value">
-                            FiO₂: <span id="fio2-calculated">--</span>%
+                            FiO₂: <span id="fio2-calculated">21</span>%
                         </div>
                         <div id="pf-result" class="calculated-value">
                             P/F ratio: <span id="pf-ratio">--</span>
@@ -204,7 +231,7 @@
 
         <!-- 푸터 -->
         <footer>
-            <p>CLIF-C ACLF Score Calculator v1.1</p>
+            <p>CLIF-C ACLF Score Calculator v1.2.1</p>
             <p class="disclaimer">본 계산기는 참고용이며, 최종 진단 및 치료 결정은 반드시 전문의와 상담하세요.</p>
         </footer>
     </div>
@@ -212,7 +239,58 @@
     <!-- 토스트 메시지 -->
     <div id="toast" class="toast"></div>
 
-    <!-- 스크립트 -->
+    <!-- 토글 버튼 스크립트 (인라인) -->
+    <script>
+        function selectOxygenType(type) {
+            var btnPao2 = document.getElementById('btn-pao2');
+            var btnSpo2 = document.getElementById('btn-spo2');
+            var pao2Group = document.getElementById('pao2-input-group');
+            var spo2Group = document.getElementById('spo2-input-group');
+            var warning = document.getElementById('spo2-warning');
+
+            if (type === 'pao2') {
+                // PaO2 선택
+                btnPao2.style.backgroundColor = '#1a73e8';
+                btnPao2.style.color = 'white';
+                btnPao2.style.fontWeight = '500';
+                btnPao2.classList.add('active');
+
+                btnSpo2.style.backgroundColor = 'transparent';
+                btnSpo2.style.color = '#666';
+                btnSpo2.style.fontWeight = 'normal';
+                btnSpo2.classList.remove('active');
+
+                pao2Group.style.display = 'block';
+                spo2Group.style.display = 'none';
+                warning.style.display = 'none';
+            } else {
+                // SpO2 선택
+                btnSpo2.style.backgroundColor = '#1a73e8';
+                btnSpo2.style.color = 'white';
+                btnSpo2.style.fontWeight = '500';
+                btnSpo2.classList.add('active');
+
+                btnPao2.style.backgroundColor = 'transparent';
+                btnPao2.style.color = '#666';
+                btnPao2.style.fontWeight = 'normal';
+                btnPao2.classList.remove('active');
+
+                pao2Group.style.display = 'none';
+                spo2Group.style.display = 'block';
+                warning.style.display = 'block';
+            }
+
+            // P/F ratio 업데이트 (app.js의 함수 호출)
+            if (typeof updatePFRatioDisplay === 'function') {
+                updatePFRatioDisplay();
+            }
+        }
+    </script>
+
+    <!-- 스크립트 (의존성 순서대로 로드) -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/validation.js"></script>
     <script src="js/calculator.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/clipboard.js"></script>

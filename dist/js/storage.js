@@ -1,15 +1,27 @@
 /**
  * CLIF-C ACLF Score Calculator
- * localStorage 이력 관리 모듈
+ * localStorage 이력 관리 모듈 (리팩터링 버전)
  */
 
 const Storage = {
-    STORAGE_KEY: 'clif_c_aclf_history',
-    MAX_HISTORY: 10,
+    /**
+     * 저장소 키 (Config에서 가져옴)
+     */
+    get STORAGE_KEY() {
+        return Config.STORAGE.KEY;
+    },
+
+    /**
+     * 최대 이력 개수 (Config에서 가져옴)
+     */
+    get MAX_HISTORY() {
+        return Config.STORAGE.MAX_HISTORY;
+    },
 
     /**
      * 이력에 결과 저장
      * @param {Object} result - 계산 결과
+     * @returns {boolean} 성공 여부
      */
     saveToHistory(result) {
         try {
@@ -87,6 +99,7 @@ const Storage = {
 
     /**
      * 전체 이력 삭제
+     * @returns {boolean} 성공 여부
      */
     clearHistory() {
         try {
@@ -122,7 +135,7 @@ const Storage = {
     }
 };
 
-// 모듈 내보내기 (브라우저 환경)
+// 모듈 내보내기
 if (typeof window !== 'undefined') {
     window.Storage = Storage;
 }
