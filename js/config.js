@@ -19,20 +19,14 @@ const Config = {
         map: { min: 20, max: 200, unit: 'mmHg' },
         pao2: { min: 30, max: 600, unit: 'mmHg' },
         spo2: { min: 70, max: 100, unit: '%' },
-        o2flow: { min: 0, max: 5, unit: 'L/min' }
-    },
-
-    // SpO2 → PaO2 변환 상수 (경험적 공식)
-    SPO2_CONVERSION: {
-        COEFFICIENT: 22,
-        EXPONENT: 0.0308
+        o2flow: { min: 0, max: 6, unit: 'L/min' }
     },
 
     // FiO2 계산 상수
     FIO2: {
         ROOM_AIR: 21,       // Room air FiO2 (%)
         PER_LITER: 4,       // 1 L/min당 증가량 (%)
-        MAX: 40             // 최대 FiO2 (%, Nasal cannula 기준)
+        MAX: 45             // 최대 FiO2 (%, Nasal cannula 6L 기준)
     },
 
     // 점수 기준값
@@ -77,43 +71,80 @@ const Config = {
         4: 3   // Grade 4 → 3점
     },
 
+    // 장기부전/장기기능장애 판정 기준 (EASL-CLIF)
+    // 모든 장기: score 3 = Organ Failure, score 2 = Dysfunction
+    ORGAN_FAILURE_SCORE: 3,
+    ORGAN_DYSFUNCTION_SCORE: 2,
+
     // ACLF Grade 결정 기준
     ACLF_GRADES: {
-        NO_ACLF: { minOF: 0, maxOF: 6, label: 'No ACLF' },
-        GRADE_1: { organs: 1, label: 'ACLF Grade 1' },
-        GRADE_2: { organs: 2, label: 'ACLF Grade 2' },
-        GRADE_3: { organs: [3, 4, 5, 6], label: 'ACLF Grade 3' }
+        NO_ACLF: { label: 'No ACLF' },
+        GRADE_1: { label: 'ACLF-1' },
+        GRADE_2: { label: 'ACLF-2' },
+        GRADE_3: { label: 'ACLF-3' }
     },
 
-    // 예후 예측 기준
+    // Grade별 사망률 (CANONIC study, Moreau et al. 2013)
+    GRADE_MORTALITY: {
+        'No ACLF': {
+            mortality28: '~5%',
+            mortality90: '~14%'
+        },
+        'ACLF-1': {
+            mortality28: '~22%',
+            mortality90: '~41%'
+        },
+        'ACLF-2': {
+            mortality28: '~32%',
+            mortality90: '~52%'
+        },
+        'ACLF-3': {
+            mortality28: '~74%',
+            mortality90: '~79%'
+        }
+    },
+
+    // Score 기반 예후 예측 기준 (5단계)
     PROGNOSIS: {
-        LOW: {
-            maxScore: 50,
-            level: 'low',
+        VERY_LOW: {
+            level: 'very-low',
             message: '저위험군',
-            mortality28: '< 20%',
-            mortality90: '< 30%',
+            mortality28: '5-10%',
+            mortality90: '10-20%',
+            color: '#155724',
+            bgColor: '#d4edda'
+        },
+        LOW: {
+            level: 'low',
+            message: '저-중위험군',
+            mortality28: '15-25%',
+            mortality90: '30-40%',
             color: '#28a745',
             bgColor: '#d4edda'
         },
         MODERATE: {
-            minScore: 51,
-            maxScore: 60,
             level: 'moderate',
             message: '중위험군',
-            mortality28: '20-50%',
-            mortality90: '30-60%',
+            mortality28: '35-45%',
+            mortality90: '50-60%',
             color: '#856404',
             bgColor: '#fff3cd'
         },
         HIGH: {
-            minScore: 61,
             level: 'high',
             message: '고위험군',
-            mortality28: '> 50%',
-            mortality90: '> 70%',
+            mortality28: '60-70%',
+            mortality90: '70-80%',
             color: '#721c24',
             bgColor: '#f8d7da'
+        },
+        VERY_HIGH: {
+            level: 'very-high',
+            message: '극고위험군 (Futility 고려)',
+            mortality28: '90-100%',
+            mortality90: '95-100%',
+            color: '#4a0000',
+            bgColor: '#f5c6cb'
         }
     },
 
@@ -131,6 +162,16 @@ const Config = {
         coagulation: '응고 (Coagulation)',
         circulation: '순환 (Circulation)',
         respiration: '호흡 (Respiration)'
+    },
+
+    // 장기명 한글 약칭 (결과 표시용)
+    ORGAN_SHORT_NAMES: {
+        liver: '간',
+        kidney: '신장',
+        brain: '뇌',
+        coagulation: '응고',
+        circulation: '순환',
+        respiration: '호흡'
     }
 };
 

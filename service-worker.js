@@ -3,7 +3,7 @@
  * Service Worker - 오프라인 지원 (v1.2)
  */
 
-const CACHE_NAME = 'clif-c-aclf-v1.2.1';
+const CACHE_NAME = 'clif-c-aclf-v1.3.0';
 
 // 캐시할 파일 목록 (리팩터링된 모듈 구조 반영)
 const urlsToCache = [

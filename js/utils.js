@@ -43,16 +43,21 @@ const Utils = {
     },
 
     /**
-     * SpO2 → PaO2 변환 (경험적 공식)
-     * PaO2 ≈ 22 × exp(SpO2 × 0.0308)
+     * SpO2 → PaO2 변환 (Hill equation 역함수)
+     * 산소해리곡선: S = PaO2^n / (P50^n + PaO2^n)
+     * 역함수: PaO2 = P50 × (S / (1 - S))^(1/n)
+     * P50 = 26.6 mmHg, n = 2.7
+     * 참고: SpO2 95% → ~76 mmHg, 90% → ~60 mmHg, 80% → ~44 mmHg
      * @param {number} spo2 - SpO2 (%)
      * @returns {number}
      */
     convertSpO2ToPaO2(spo2) {
         const { min, max } = Config.INPUT_RANGES.spo2;
         if (spo2 < min || spo2 > max) return 0;
-        return Config.SPO2_CONVERSION.COEFFICIENT *
-               Math.exp(spo2 * Config.SPO2_CONVERSION.EXPONENT);
+        // SpO2 100%는 수학적으로 무한대이므로 99%로 제한
+        const clampedSpo2 = Math.min(spo2, 99);
+        const S = clampedSpo2 / 100;
+        return 26.6 * Math.pow(S / (1 - S), 1 / 2.7);
     },
 
     /**

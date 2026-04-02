@@ -540,6 +540,29 @@ header .subtitle {
 .organ-name {
     font-size: 0.9rem;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.organ-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+}
+
+.organ-badge.failure {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.organ-badge.dysfunction {
+    background-color: #fff3cd;
+    color: #856404;
 }
 
 .organ-score {
@@ -584,11 +607,32 @@ header .subtitle {
     border-radius: var(--radius-sm);
     font-weight: 600;
     color: var(--primary-color);
+    line-height: 1.6;
+}
+
+.grade-sub {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.grade-note {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--warning-color);
+    margin-top: 4px;
 }
 
 /* 예후 카드 */
 .prognosis-card {
     border-left: 4px solid;
+}
+
+.prognosis-card.prognosis-very-low {
+    border-left-color: var(--success-color);
 }
 
 .prognosis-card.prognosis-low {
@@ -601,6 +645,10 @@ header .subtitle {
 
 .prognosis-card.prognosis-high {
     border-left-color: #dc3545;
+}
+
+.prognosis-card.prognosis-very-high {
+    border-left-color: #4a0000;
 }
 
 .prognosis-content {
@@ -616,11 +664,28 @@ header .subtitle {
     display: inline-block;
 }
 
+.mortality-section {
+    margin-top: 16px;
+    padding-top: 12px;
+}
+
+.mortality-section + .mortality-section {
+    border-top: 1px solid #eee;
+}
+
+.mortality-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
 .mortality-info {
     display: flex;
     justify-content: center;
     gap: 24px;
-    margin-top: 12px;
+    margin-top: 8px;
 }
 
 .mortality-item {

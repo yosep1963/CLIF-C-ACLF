@@ -282,36 +282,72 @@
             <span class="unit">/ 18</span>
         `;
 
-        // 장기별 점수
+        // 장기별 점수 (부전/장애 배지 포함)
         elements.organBreakdown.innerHTML = Object.entries(result.organScores)
-            .map(([organ, score]) => `
-                <div class="organ-item">
-                    <span class="organ-name">${Calculator.organNames[organ]}</span>
-                    <span class="organ-score">
-                        <span class="indicator ${Utils.getScoreClass(score)}"></span>
-                        <span class="value">${score}점</span>
-                    </span>
-                </div>
-            `).join('');
+            .map(([organ, score]) => {
+                const isFailure = Calculator.isOrganFailure(organ, score);
+                const isDysfunction = Calculator.isOrganDysfunction(organ, score);
+                const badge = isFailure ? '<span class="organ-badge failure">부전</span>' :
+                              isDysfunction ? '<span class="organ-badge dysfunction">장애</span>' : '';
+                return `
+                    <div class="organ-item">
+                        <span class="organ-name">${Calculator.organNames[organ]} ${badge}</span>
+                        <span class="organ-score">
+                            <span class="indicator ${Utils.getScoreClass(score)}"></span>
+                            <span class="value">${score}점</span>
+                        </span>
+                    </div>
+                `;
+            }).join('');
 
-        // ACLF Score & Grade
+        // ACLF Score & Grade (장기부전/장애 상세 표시)
         elements.aclfScore.innerHTML = `<span class="value">${result.aclfScore}</span>`;
-        elements.aclfGrade.textContent = `${result.aclfGrade.grade} (${result.aclfGrade.count}개 장기부전)`;
+        const gradeInfo = result.aclfGrade;
+        const failedOrgans = gradeInfo.failedOrgans || [];
+        const dysfunctionalOrgans = gradeInfo.dysfunctionalOrgans || [];
+        let gradeHTML = gradeInfo.grade;
+        if (failedOrgans.length > 0) {
+            gradeHTML += ` (${failedOrgans.join(', ')} 장기부전)`;
+        }
+        if (dysfunctionalOrgans.length > 0) {
+            gradeHTML += `<span class="grade-sub">${dysfunctionalOrgans.join(', ')} 장기기능장애</span>`;
+        }
+        if (gradeInfo.note) {
+            gradeHTML += `<span class="grade-note">※ ${gradeInfo.note}</span>`;
+        }
+        elements.aclfGrade.innerHTML = gradeHTML;
 
-        // 예후
+        // 예후 (Grade 기반 + Score 기반 이중 표시)
+        const gm = result.gradeMortality || Calculator.getGradeMortality(gradeInfo.grade);
         elements.prognosisCard.className = `result-card prognosis-card prognosis-${result.prognosis.level}`;
         elements.prognosisContent.innerHTML = `
             <div class="prognosis-level" style="background-color: ${result.prognosis.bgColor}; color: ${result.prognosis.color};">
                 ${result.prognosis.message}
             </div>
-            <div class="mortality-info">
-                <div class="mortality-item">
-                    <div class="label">28일 사망률</div>
-                    <div class="value" style="color: ${result.prognosis.color};">${result.prognosis.mortality28}</div>
+            <div class="mortality-section">
+                <div class="mortality-header">Grade 기반 사망률 (${gradeInfo.grade})</div>
+                <div class="mortality-info">
+                    <div class="mortality-item">
+                        <div class="label">28일 사망률</div>
+                        <div class="value" style="color: ${result.prognosis.color};">${gm.mortality28}</div>
+                    </div>
+                    <div class="mortality-item">
+                        <div class="label">90일 사망률</div>
+                        <div class="value" style="color: ${result.prognosis.color};">${gm.mortality90}</div>
+                    </div>
                 </div>
-                <div class="mortality-item">
-                    <div class="label">90일 사망률</div>
-                    <div class="value" style="color: ${result.prognosis.color};">${result.prognosis.mortality90}</div>
+            </div>
+            <div class="mortality-section">
+                <div class="mortality-header">Score 기반 사망률 (CLIF-C ACLF ${result.aclfScore}점)</div>
+                <div class="mortality-info">
+                    <div class="mortality-item">
+                        <div class="label">28일 사망률</div>
+                        <div class="value" style="color: ${result.prognosis.color};">${result.prognosis.mortality28}</div>
+                    </div>
+                    <div class="mortality-item">
+                        <div class="label">90일 사망률</div>
+                        <div class="value" style="color: ${result.prognosis.color};">${result.prognosis.mortality90}</div>
+                    </div>
                 </div>
             </div>
         `;

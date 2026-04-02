@@ -142,57 +142,118 @@ const Calculator = {
     },
 
     /**
-     * ACLF Grade 결정
-     * 장기부전 = 해당 장기 점수 >= 2점
-     * @param {Object} organScores - 장기별 점수
-     * @returns {Object} grade와 장기부전 개수
+     * 장기부전 여부 판정 (EASL-CLIF 기준: score = 3)
+     * @param {string} organ - 장기명
+     * @param {number} score - CLIF-OF score (1-3)
+     * @returns {boolean}
      */
-    determineACLFGrade(organScores) {
-        // 2점 이상인 장기 = 장기부전
-        const organFailures = Object.values(organScores).filter(score => score >= 2).length;
-
-        if (organFailures === 0) {
-            return { grade: 'No ACLF', count: 0 };
-        }
-        if (organFailures === 1) {
-            return { grade: 'ACLF-1', count: 1 };
-        }
-        if (organFailures === 2) {
-            return { grade: 'ACLF-2', count: 2 };
-        }
-        return { grade: 'ACLF-3', count: organFailures };
+    isOrganFailure(organ, score) {
+        return score >= Config.ORGAN_FAILURE_SCORE;
     },
 
     /**
-     * 예후 판정
+     * 장기기능장애 여부 판정 (score = 2이면서 부전이 아닌 경우)
+     * @param {string} organ - 장기명
+     * @param {number} score - CLIF-OF score (1-3)
+     * @returns {boolean}
+     */
+    isOrganDysfunction(organ, score) {
+        return !this.isOrganFailure(organ, score) && score >= Config.ORGAN_DYSFUNCTION_SCORE;
+    },
+
+    /**
+     * 장기부전/장애 목록 반환
+     * @param {Object} organScores - 장기별 점수
+     * @returns {Object} { failures: string[], dysfunctions: string[] }
+     */
+    getOrganStatus(organScores) {
+        const failures = [];
+        const dysfunctions = [];
+        for (const [organ, score] of Object.entries(organScores)) {
+            if (this.isOrganFailure(organ, score)) {
+                failures.push(organ);
+            } else if (this.isOrganDysfunction(organ, score)) {
+                dysfunctions.push(organ);
+            }
+        }
+        return { failures, dysfunctions };
+    },
+
+    /**
+     * ACLF Grade 결정 (EASL-CLIF / CANONIC study 기준)
+     * - 장기부전(Organ Failure) = CLIF-OF score 3 (모든 장기 동일)
+     * - ACLF-1 특별기준:
+     *   · 단독 신장부전 → ACLF-1
+     *   · 비신장 단일 부전 + 신장기능장애(score 2) 또는 뇌기능장애(score 2) → ACLF-1
+     *   · 비신장 단일 부전 단독 → No ACLF
+     * - ACLF-2: 2개 장기부전
+     * - ACLF-3: 3개 이상 장기부전
+     * @param {Object} organScores - 장기별 점수
+     * @returns {Object} grade, count, failedOrgans, dysfunctionalOrgans
+     */
+    determineACLFGrade(organScores) {
+        const { failures, dysfunctions } = this.getOrganStatus(organScores);
+        const failureCount = failures.length;
+
+        const shortNames = Config.ORGAN_SHORT_NAMES;
+        const failedOrgans = failures.map(o => shortNames[o]);
+        const dysfunctionalOrgans = dysfunctions.map(o => shortNames[o]);
+
+        if (failureCount === 0) {
+            return { grade: 'No ACLF', count: 0, failedOrgans: [], dysfunctionalOrgans };
+        }
+        if (failureCount >= 3) {
+            return { grade: 'ACLF-3', count: failureCount, failedOrgans, dysfunctionalOrgans };
+        }
+        if (failureCount === 2) {
+            return { grade: 'ACLF-2', count: 2, failedOrgans, dysfunctionalOrgans };
+        }
+
+        // 1개 장기부전 → ACLF-1 특별기준 적용
+        const singleFailureOrgan = failures[0];
+
+        // 단독 신장부전 → ACLF-1
+        if (singleFailureOrgan === 'kidney') {
+            return { grade: 'ACLF-1', count: 1, failedOrgans, dysfunctionalOrgans };
+        }
+
+        // 비신장 단일 부전 + 신장기능장애(score 2) 또는 뇌기능장애(score 2) → ACLF-1
+        const hasKidneyDysfunction = organScores.kidney >= Config.ORGAN_DYSFUNCTION_SCORE;
+        const hasCerebralDysfunction = organScores.brain >= Config.ORGAN_DYSFUNCTION_SCORE;
+
+        if (hasKidneyDysfunction || hasCerebralDysfunction) {
+            return { grade: 'ACLF-1', count: 1, failedOrgans, dysfunctionalOrgans };
+        }
+
+        // 비신장 단일 부전 + 신장/뇌 장애 없음 → No ACLF
+        return {
+            grade: 'No ACLF', count: 0,
+            failedOrgans, dysfunctionalOrgans,
+            note: '단일 비신장 장기부전이나 신장/뇌 기능장애 없음'
+        };
+    },
+
+    /**
+     * Grade 기반 사망률 반환
+     * @param {string} grade - ACLF grade string
+     * @returns {Object}
+     */
+    getGradeMortality(grade) {
+        return Config.GRADE_MORTALITY[grade] || Config.GRADE_MORTALITY['No ACLF'];
+    },
+
+    /**
+     * Score 기반 예후 판정 (5단계)
      * @param {number} score - CLIF-C ACLF Score
      * @returns {Object} 예후 정보
      */
     getPrognosis(score) {
-        const prognosis = Config.PROGNOSIS;
-
-        if (score < 45) {
-            return {
-                ...prognosis.LOW,
-                mortality28: '약 10%',
-                mortality90: '약 20%',
-                message: '비교적 양호한 예후'
-            };
-        } else if (score <= 60) {
-            return {
-                ...prognosis.MODERATE,
-                mortality28: '30-40%',
-                mortality90: '약 50%',
-                message: '중등도 위험군'
-            };
-        } else {
-            return {
-                ...prognosis.HIGH,
-                mortality28: '60-70%',
-                mortality90: '약 80%',
-                message: '고위험군'
-            };
-        }
+        const p = Config.PROGNOSIS;
+        if (score < 40) return { ...p.VERY_LOW };
+        if (score < 50) return { ...p.LOW };
+        if (score < 60) return { ...p.MODERATE };
+        if (score < 70) return { ...p.HIGH };
+        return { ...p.VERY_HIGH };
     },
 
     /**
@@ -206,6 +267,7 @@ const Calculator = {
         const aclfScore = this.calculateCLIFCACLF(ofScore, inputs.age, inputs.wbc);
         const aclfGrade = this.determineACLFGrade(organScores);
         const prognosis = this.getPrognosis(aclfScore);
+        const gradeMortality = this.getGradeMortality(aclfGrade.grade);
 
         return {
             inputs: { ...inputs },
@@ -214,6 +276,7 @@ const Calculator = {
             aclfScore,
             aclfGrade,
             prognosis,
+            gradeMortality,
             timestamp: new Date().toISOString()
         };
     }

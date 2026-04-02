@@ -68,9 +68,15 @@ ${organScoreText}
 
 【CLIF-C ACLF Score】
   점수: ${result.aclfScore}
-  등급: ${result.aclfGrade.grade} (${result.aclfGrade.count}개 장기부전)
+  등급: ${result.aclfGrade.grade}
+  장기부전: ${(result.aclfGrade.failedOrgans || []).length > 0 ? (result.aclfGrade.failedOrgans || []).join(', ') : '없음'}
+  장기기능장애: ${(result.aclfGrade.dysfunctionalOrgans || []).length > 0 ? (result.aclfGrade.dysfunctionalOrgans || []).join(', ') : '없음'}
 
-【예후 예측】
+【예후 예측 - Grade 기반 (${result.aclfGrade.grade})】
+  28일 사망률: ${(result.gradeMortality || {}).mortality28 || '-'}
+  90일 사망률: ${(result.gradeMortality || {}).mortality90 || '-'}
+
+【예후 예측 - Score 기반 (CLIF-C ACLF ${result.aclfScore}점)】
   위험도: ${result.prognosis.message}
   28일 사망률: ${result.prognosis.mortality28}
   90일 사망률: ${result.prognosis.mortality90}

@@ -1,31 +1,49 @@
 /**
  * CLIF-C ACLF Score Calculator
- * 스타일시트
+ * 스타일시트 (리팩터링 버전 v1.2)
  */
 
-/* CSS 변수 정의 */
+/* ==========================================================================
+   CSS 변수 정의
+   ========================================================================== */
 :root {
+    /* 색상 */
     --primary-color: #1a73e8;
     --primary-dark: #1557b0;
     --primary-light: #e8f0fe;
+
+    /* 상태 색상 */
     --success-color: #28a745;
     --success-bg: #d4edda;
     --warning-color: #856404;
     --warning-bg: #fff3cd;
     --danger-color: #721c24;
     --danger-bg: #f8d7da;
+
+    /* 기본 색상 */
     --bg-color: #f5f7fa;
     --card-bg: #ffffff;
     --text-primary: #202124;
     --text-secondary: #5f6368;
     --border-color: #dadce0;
+
+    /* 효과 */
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
     --radius: 12px;
     --radius-sm: 8px;
+
+    /* 입력 필드 */
+    --input-padding: 14px 16px;
+    --input-font-size: 16px;
 }
 
-/* 기본 리셋 */
-* {
+/* ==========================================================================
+   기본 리셋 및 설정
+   ========================================================================== */
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -45,7 +63,97 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* 컨테이너 */
+/* ==========================================================================
+   유틸리티 클래스 - 점수 색상
+   ========================================================================== */
+.score-1 {
+    background-color: var(--success-bg);
+    color: var(--success-color);
+}
+
+.score-2 {
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
+}
+
+.score-3 {
+    background-color: var(--danger-bg);
+    color: var(--danger-color);
+}
+
+.grade-low {
+    background-color: var(--success-bg);
+    color: var(--success-color);
+}
+
+.grade-moderate {
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
+}
+
+.grade-high {
+    background-color: var(--danger-bg);
+    color: var(--danger-color);
+}
+
+/* ==========================================================================
+   공통 입력 스타일
+   ========================================================================== */
+.form-input,
+.input-group input[type="number"],
+.input-group select,
+.dual-input-item input,
+.dual-input-item select {
+    width: 100%;
+    padding: var(--input-padding);
+    font-size: var(--input-font-size);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: #fff;
+    color: var(--text-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.form-input:focus,
+.input-group input[type="number"]:focus,
+.input-group select:focus,
+.dual-input-item input:focus,
+.dual-input-item select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.input-group input[type="number"]::placeholder,
+.dual-input-item input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* 셀렉트 화살표 */
+.input-group select,
+.dual-input-item select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6368' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+}
+
+/* 숫자 입력 스핀 버튼 숨기기 */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* ==========================================================================
+   레이아웃
+   ========================================================================== */
 .container {
     max-width: 600px;
     margin: 0 auto;
@@ -53,7 +161,9 @@ body {
     padding-top: max(16px, env(safe-area-inset-top));
 }
 
-/* 헤더 */
+/* ==========================================================================
+   헤더
+   ========================================================================== */
 header {
     text-align: center;
     padding: 20px 0;
@@ -72,7 +182,9 @@ header .subtitle {
     color: var(--text-secondary);
 }
 
-/* 섹션 */
+/* ==========================================================================
+   입력 섹션
+   ========================================================================== */
 .input-section {
     background: var(--card-bg);
     border-radius: var(--radius);
@@ -106,37 +218,14 @@ header .subtitle {
     color: var(--text-primary);
 }
 
-.input-group input[type="number"],
-.input-group select {
-    width: 100%;
-    padding: 14px 16px;
-    font-size: 16px; /* iOS 줌 방지 */
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    background-color: #fff;
-    color: var(--text-primary);
-    transition: border-color 0.2s, box-shadow 0.2s;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.input-group input[type="number"]:focus,
-.input-group select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--primary-light);
-}
-
-.input-group input[type="number"]::placeholder {
+/* 서브 라벨 */
+.sub-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
     color: var(--text-secondary);
-}
-
-/* 셀렉트 화살표 */
-.input-group select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6368' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    padding-right: 40px;
+    margin-bottom: 8px;
+    margin-top: 4px;
 }
 
 /* 힌트 텍스트 */
@@ -147,7 +236,7 @@ header .subtitle {
     margin-top: 6px;
 }
 
-/* 두 개 입력 필드 (PaO2/FiO2) */
+/* 두 개 입력 필드 */
 .dual-input {
     display: flex;
     gap: 12px;
@@ -166,50 +255,85 @@ header .subtitle {
     margin-bottom: 6px;
 }
 
-.dual-input-item input {
-    width: 100%;
-    padding: 14px 16px;
-    font-size: 16px;
-    border: 1px solid var(--border-color);
+/* ==========================================================================
+   산소화 토글 (세그먼트 버튼)
+   ========================================================================== */
+.oxygen-type-toggle {
+    display: flex;
+    background-color: #f0f0f0;
     border-radius: var(--radius-sm);
-    background-color: #fff;
-    color: var(--text-primary);
-    transition: border-color 0.2s, box-shadow 0.2s;
-    -webkit-appearance: none;
-    appearance: none;
+    padding: 4px;
+    margin-bottom: 16px;
 }
 
-.dual-input-item input:focus {
-    outline: none;
+.toggle-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #666;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.toggle-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 500;
+}
+
+.toggle-btn:hover:not(.active) {
+    background-color: #e0e0e0;
+}
+
+/* ==========================================================================
+   입력 필드 + 단위
+   ========================================================================== */
+.input-with-unit {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background-color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-with-unit:focus-within {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px var(--primary-light);
 }
 
-/* dual-input 내 셀렉트 스타일 */
-.dual-input-item select {
-    width: 100%;
-    padding: 14px 16px;
-    font-size: 16px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    background-color: #fff;
+.input-with-unit input {
+    flex: 1;
+    border: none;
+    padding: var(--input-padding);
+    font-size: var(--input-font-size);
+    background: transparent;
     color: var(--text-primary);
-    transition: border-color 0.2s, box-shadow 0.2s;
     -webkit-appearance: none;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6368' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    padding-right: 40px;
 }
 
-.dual-input-item select:focus {
+.input-with-unit input:focus {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
-/* 자동 계산된 값 표시 */
+.input-with-unit .unit {
+    padding: var(--input-padding);
+    background-color: var(--bg-color);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-left: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   계산된 값 표시
+   ========================================================================== */
 .calculated-value {
     display: flex;
     align-items: center;
@@ -228,22 +352,22 @@ header .subtitle {
     font-size: 1.1rem;
 }
 
-.calculated-value.score-1 {
-    background-color: var(--success-bg);
-    color: var(--success-color);
-}
-
-.calculated-value.score-2 {
+/* ==========================================================================
+   경고 메시지
+   ========================================================================== */
+.warning-message {
     background-color: var(--warning-bg);
+    border: 1px solid #ffc107;
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
     color: var(--warning-color);
 }
 
-.calculated-value.score-3 {
-    background-color: var(--danger-bg);
-    color: var(--danger-color);
-}
-
-/* 체크박스 그룹 */
+/* ==========================================================================
+   체크박스 그룹
+   ========================================================================== */
 .checkbox-group {
     display: flex;
     align-items: center;
@@ -268,7 +392,9 @@ header .subtitle {
     font-size: 0.95rem;
 }
 
-/* 버튼 그룹 */
+/* ==========================================================================
+   버튼
+   ========================================================================== */
 .button-group {
     display: flex;
     gap: 12px;
@@ -311,7 +437,34 @@ header .subtitle {
     background-color: #e8eaed;
 }
 
-/* 결과 섹션 */
+/* 복사 버튼 */
+.btn-copy {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    background-color: var(--card-bg);
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.btn-copy:hover {
+    background-color: var(--primary-light);
+}
+
+.btn-copy.copied {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+    color: white;
+}
+
+/* ==========================================================================
+   결과 섹션
+   ========================================================================== */
 .result-section {
     margin-top: 24px;
 }
@@ -343,6 +496,8 @@ header .subtitle {
     margin-bottom: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 /* 점수 표시 */
@@ -351,6 +506,8 @@ header .subtitle {
     font-weight: 700;
     color: var(--text-primary);
     text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .score-display.large {
@@ -363,7 +520,7 @@ header .subtitle {
     color: var(--text-secondary);
 }
 
-/* 장기별 점수 표시 */
+/* 장기별 점수 */
 .organ-breakdown {
     margin-top: 16px;
 }
@@ -383,6 +540,29 @@ header .subtitle {
 .organ-name {
     font-size: 0.9rem;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.organ-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+}
+
+.organ-badge.failure {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.organ-badge.dysfunction {
+    background-color: #fff3cd;
+    color: #856404;
 }
 
 .organ-score {
@@ -427,11 +607,32 @@ header .subtitle {
     border-radius: var(--radius-sm);
     font-weight: 600;
     color: var(--primary-color);
+    line-height: 1.6;
+}
+
+.grade-sub {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.grade-note {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--warning-color);
+    margin-top: 4px;
 }
 
 /* 예후 카드 */
 .prognosis-card {
     border-left: 4px solid;
+}
+
+.prognosis-card.prognosis-very-low {
+    border-left-color: var(--success-color);
 }
 
 .prognosis-card.prognosis-low {
@@ -444,6 +645,10 @@ header .subtitle {
 
 .prognosis-card.prognosis-high {
     border-left-color: #dc3545;
+}
+
+.prognosis-card.prognosis-very-high {
+    border-left-color: #4a0000;
 }
 
 .prognosis-content {
@@ -459,11 +664,28 @@ header .subtitle {
     display: inline-block;
 }
 
+.mortality-section {
+    margin-top: 16px;
+    padding-top: 12px;
+}
+
+.mortality-section + .mortality-section {
+    border-top: 1px solid #eee;
+}
+
+.mortality-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
 .mortality-info {
     display: flex;
     justify-content: center;
     gap: 24px;
-    margin-top: 12px;
+    margin-top: 8px;
 }
 
 .mortality-item {
@@ -481,32 +703,9 @@ header .subtitle {
     font-weight: 700;
 }
 
-/* 복사 버튼 */
-.btn-copy {
-    width: 100%;
-    padding: 14px 24px;
-    font-size: 1rem;
-    font-weight: 500;
-    background-color: var(--card-bg);
-    color: var(--primary-color);
-    border: 2px solid var(--primary-color);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 8px;
-}
-
-.btn-copy:hover {
-    background-color: var(--primary-light);
-}
-
-.btn-copy.copied {
-    background-color: var(--success-color);
-    border-color: var(--success-color);
-    color: white;
-}
-
-/* 이력 섹션 */
+/* ==========================================================================
+   이력 섹션
+   ========================================================================== */
 .history-section {
     margin-top: 32px;
     padding-top: 24px;
@@ -533,7 +732,7 @@ header .subtitle {
     padding: 14px 16px;
     background: var(--card-bg);
     border-radius: var(--radius-sm);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
     transition: box-shadow 0.2s;
 }
@@ -565,21 +764,6 @@ header .subtitle {
     font-weight: 600;
 }
 
-.history-grade.grade-low {
-    background-color: var(--success-bg);
-    color: var(--success-color);
-}
-
-.history-grade.grade-moderate {
-    background-color: var(--warning-bg);
-    color: var(--warning-color);
-}
-
-.history-grade.grade-high {
-    background-color: var(--danger-bg);
-    color: var(--danger-color);
-}
-
 .btn-clear-history {
     width: 100%;
     padding: 12px;
@@ -605,7 +789,9 @@ header .subtitle {
     font-size: 0.9rem;
 }
 
-/* 푸터 */
+/* ==========================================================================
+   푸터
+   ========================================================================== */
 footer {
     margin-top: 32px;
     padding: 24px 0;
@@ -624,7 +810,9 @@ footer .disclaimer {
     color: #999;
 }
 
-/* 토스트 메시지 */
+/* ==========================================================================
+   토스트 메시지
+   ========================================================================== */
 .toast {
     position: fixed;
     bottom: 100px;
@@ -645,7 +833,9 @@ footer .disclaimer {
     opacity: 1;
 }
 
-/* 로딩 스피너 */
+/* ==========================================================================
+   로딩 스피너
+   ========================================================================== */
 .spinner {
     width: 20px;
     height: 20px;
@@ -663,7 +853,9 @@ footer .disclaimer {
     }
 }
 
-/* 반응형 */
+/* ==========================================================================
+   반응형
+   ========================================================================== */
 @media (max-width: 400px) {
     .container {
         padding: 12px;
@@ -695,7 +887,9 @@ footer .disclaimer {
     }
 }
 
-/* 스크롤바 스타일링 (Webkit) */
+/* ==========================================================================
+   스크롤바 스타일 (Webkit)
+   ========================================================================== */
 ::-webkit-scrollbar {
     width: 6px;
 }
@@ -707,22 +901,4 @@ footer .disclaimer {
 ::-webkit-scrollbar-thumb {
     background-color: var(--border-color);
     border-radius: 3px;
-}
-
-/* 선택 불가 (의료 앱 특성) */
-.score-display,
-.result-card h3 {
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-/* 입력 필드 숫자 스핀 버튼 숨기기 */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-input[type="number"] {
-    -moz-appearance: textfield;
 }
